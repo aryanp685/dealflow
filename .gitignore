@@ -1,0 +1,14 @@
+node_modules
+.next
+test-build
+data/*.db
+data/*.db-shm
+data/*.db-wal
+.env.local
+.env
+npm-debug.log*
+.DS_Store
+next-env.d.ts.bak
+.vercel
+.env*
+.deploy-secrets

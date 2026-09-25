@@ -1,0 +1,91 @@
+import type { Metadata, Viewport } from 'next';
+import Providers from '@/components/providers';
+import { faqs, offers } from '@/lib/content';
+import './globals.css';
+
+const site = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const title = 'DealFlow — stop losing money on brand deals';
+const description =
+  'Track every brand deal, deadline and invoice — then let DealFlow write the follow-up when a brand sits on your payment. GST and TDS split included.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: 'DealFlow',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: site,
+      description,
+      offers: offers.map((o) => ({ '@type': 'Offer', ...o })),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
+};
+
+export const metadata: Metadata = {
+  metadataBase: new URL(site),
+  title: { default: title, template: '%s — DealFlow' },
+  description,
+  applicationName: 'DealFlow',
+  alternates: { canonical: '/' },
+  keywords: [
+    'brand deal tracker',
+    'creator invoice tracker',
+    'freelancer payment tracking',
+    'GST TDS calculator India',
+    'overdue invoice reminder',
+    'influencer brand deal management',
+  ],
+  openGraph: {
+    title,
+    description,
+    url: site,
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
+  other: {
+    'google-site-verification': process.env.GOOGLE_SITE_VERIFICATION || '',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0b0d10',
+  colorScheme: 'dark',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    // suppressHydrationWarning: browser extensions rewrite attributes on
+    // <html>/<body> before React hydrates; without this every visitor with an
+    // extension sees a hydration error in the console.
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <Providers>{children}</Providers>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </body>
+    </html>
+  );
+}
