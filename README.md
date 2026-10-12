@@ -18,7 +18,7 @@ Built to sell at **₹299/mo (India)** and **$9/mo (global)**. The gap: creator-
 | Database | SQLite (dev) / Supabase Postgres (prod) | `DATABASE_URL` switches drivers; schema in `supabase/schema.sql` |
 | Utilities | clsx | Conditional class names |
 | Rate limiting | Upstash Redis (sliding window) | Shared across serverless instances; in-memory fallback locally |
-| Payments | Razorpay webhook-verified | Plans grant only on a signed `payment.captured` webhook |
+| Payments | Razorpay + Stripe, webhook-verified | Plans grant only on a signed webhook with the exact plan amount; nothing is granted at checkout |
 
 ---
 
@@ -38,7 +38,7 @@ Nothing is required in `.env.local` to run locally. Copy `.env.example` when you
 ### Verify
 
 ```bash
-npm test             # 59 unit tests
+npm test             # 78 unit tests
 npx next build       # production build + full typecheck
 ```
 
@@ -53,8 +53,12 @@ The tests compile `src/lib/*` with `tsc` and run against the **real compiled out
 | `AUTH_SECRET` | **Production** | Signs the session JWT. `openssl rand -base64 32`. The app refuses to boot in production without it. |
 | `DATABASE_URL` | **Production** | Supabase "Transaction pooler" string + `?sslmode=require`. Without it, local SQLite. Run `supabase/schema.sql` once first. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Recommended | Rate limiting across serverless instances. Without them, in-memory fallback. |
-| `RAZORPAY_KEY_ID` | For payments | `rzp_test_…` then `rzp_live_…`. Without it, links are placeholders and the UI says so. |
-| `RAZORPAY_WEBHOOK_SECRET` | For payments | Without it `/api/webhooks/razorpay` returns 503 and no plan is ever granted. |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | For INR payments | `rzp_test_…` then `rzp_live_…`. Without them, links are placeholders and the UI says so. |
+| `RAZORPAY_WEBHOOK_SECRET` | For INR payments | Without it `/api/webhooks/razorpay` returns 503 and no plan is ever granted. |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | For USD payments | Without them the Stripe rail is disabled (`/api/webhooks/stripe` returns 503). |
+| `RESEND_API_KEY` | For emails | Daily digest + password-reset emails. Without it the digest reports dry-run and reset returns 503 in production. |
+| `RESEND_FROM` | For emails | Address on a verified domain. Without it, Resend's test sender only reaches the account owner's inbox. |
+| `CRON_SECRET` | For the digest cron | Vercel sends it as `Authorization: Bearer` on cron runs. Without it `/api/cron/digest` answers 401 to everyone. |
 | `DEALFLOW_DB_PATH` | No | Override the SQLite file. Defaults to `./data/dealflow.db`. |
 | `NEXT_PUBLIC_SITE_URL` | No | Used for `metadataBase` / OpenGraph / sitemap URLs. |
 
@@ -76,15 +80,20 @@ The tests compile `src/lib/*` with `tsc` and run against the **real compiled out
 | `POST` | `/api/auth/login` | Sign in |
 | `POST` | `/api/auth/logout` | Clear session |
 | `GET` | `/api/auth/session` | Current user |
+| `POST` | `/api/auth/forgot-password` | Reset email (Resend; dev link in non-prod) |
+| `POST` | `/api/auth/reset-password` | Set new password, kill all sessions |
 | `GET` | `/api/deals` | List deals + plan usage |
 | `POST` | `/api/deals` | Create (enforces plan limit) |
 | `GET/PATCH/DELETE` | `/api/deals/[id]` | Read / update / delete |
 | `GET` | `/api/metrics` | Totals, ageing, top brands, monthly trend |
 | `GET` | `/api/reminders` | Follow-up messages (`?text=1` = plain text) |
-| `POST` | `/api/payments` | Razorpay Payment Link |
-| `POST` | `/api/checkout` | Plan upgrade |
-| `GET` | `/api/export` | CA-ready CSV (26 columns) |
-| `POST` | `/api/seed` | Load six sample deals |
+| `POST` | `/api/payments` | Razorpay Payment Link (+ optional logged deal) |
+| `POST` | `/api/checkout` | Plan upgrade (Stripe or Razorpay link, grants nothing) |
+| `GET` | `/api/export` | CA-ready CSV (26 columns; `?format=zoho`) |
+| `POST` | `/api/seed` | Load six sample deals (once per account) |
+| `POST` | `/api/webhooks/razorpay` | Verify + grant plan (INR) |
+| `POST` | `/api/webhooks/stripe` | Verify + grant plan (USD) |
+| `GET` | `/api/cron/digest` | Daily 08:30 IST digest (Vercel Cron, `CRON_SECRET`) |
 
 Everything except `/api/auth/*` returns **401** without a valid session.
 
@@ -124,16 +133,17 @@ USD deals blend into the INR headline totals at a fixed ₹85/$ (`USD_INR` in `s
 
 ## What's still open before launch
 
+Already shipped: Postgres/Supabase driver, Razorpay + Stripe webhooks (grant-only-on-verified-payment), rate limiting, password reset with session invalidation, lifetime deal with a 50-spot cap.
+
 | Item | Why it matters | Effort |
 |---|---|---|
-| **Postgres/Supabase** | SQLite doesn't persist on Vercel's serverless FS | Port `src/lib/db.ts` — queries are already plain SQL |
-| **Payment webhooks** | Right now `checkout` grants access optimistically in dev. Production must grant only on a verified Razorpay/Whop webhook, or people get Pro for free | Razorpay Subscriptions or Whop + one webhook route |
-| **Resend domain verify** | `/api/cron/digest` ships a daily 08:30 IST digest via Vercel Cron; until a domain is verified at resend.com/domains (and `RESEND_FROM` set), Resend's test sender only reaches the account owner's inbox | DNS records, 10 min |
-| **Password reset** | No reset flow yet — a user who forgets is locked out | 1 hr |
-| **Rate limiting** | `/api/auth/login` is unthrottled, so it's brute-forceable | Add `@upstash/ratelimit` or Upstash Redis |
-| **Tests for the API layer** | The 59 tests cover money/date/reminder/schema/DB logic but not the route handlers | Playwright or supertest suite |
-| **Real demo content** | Landing page needs a screenshot or a 90-second Loom above the fold | 30 min |
-| **Onboarding** | After signup, drop the user straight into the seeded state instead of an empty screen | 30 min |
+| **Resend domain verify** | Until a domain is verified at resend.com/domains (and `RESEND_FROM` set), Resend's test sender only reaches the account owner's inbox | DNS records, 10 min |
+| **OAuth (Google)** | Creators expect one-click signup; email+password only = friction | Supabase Auth / NextAuth, 2–3 hrs |
+| **Tests for the API layer** | The 78 tests cover money/date/reminder/schema/DB logic but not the route handlers | Playwright or supertest suite |
+| **Onboarding auto-seed** | After signup, drop the user straight into the seeded state instead of an empty screen | 30 min |
+| **Launch video** | A 90-second Loom above the fold on the landing page | 30 min |
+| **Analytics** | Know the signup → seed → paid funnel (PostHog, privacy-friendly) | 1 hr |
+| **Delete account** | Self-serve data deletion (GDPR peace of mind) | 1 hr |
 
 ---
 

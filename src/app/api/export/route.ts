@@ -78,9 +78,13 @@ export async function GET(request: Request) {
   }
 }
 
-// RFC 4180: quote the field and double any embedded quote.
+// RFC 4180: quote the field and double any embedded quote. A cell starting
+// with = + - or @ executes as a formula when the CSV is opened in
+// Excel/Sheets, so neutralise the first character — brand names and notes are
+// user input and must never become code execution on the CA's machine.
 function escapeCsv(value: string): string {
-  const needsQuotes = /[",\r\n]/.test(value);
-  const escaped = value.replace(/"/g, '""');
+  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  const needsQuotes = /[",\r\n]/.test(safe);
+  const escaped = safe.replace(/"/g, '""');
   return needsQuotes ? `"${escaped}"` : escaped;
 }

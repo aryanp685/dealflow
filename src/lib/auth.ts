@@ -17,6 +17,7 @@ export type User = {
   email: string;
   plan: string;
   plan_expires_at: number | null;
+  session_version: number;
   created_at: string;
 };
 
@@ -73,19 +74,22 @@ export function createUser(input: { name: string; email: string; passwordHash: s
 
 /* ---------------------------------------------------------------- tokens */
 
-export async function createSessionToken(userId: number): Promise<string> {
-  return new SignJWT({ sub: String(userId) })
+export async function createSessionToken(userId: number, sessionVersion = 1): Promise<string> {
+  return new SignJWT({ sub: String(userId), v: sessionVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
     .sign(secretKey());
 }
 
-export async function readSessionToken(token: string): Promise<number | null> {
+export async function readSessionToken(token: string): Promise<{ id: number; version: number } | null> {
   try {
     const { payload } = await jwtVerify(token, secretKey());
     const id = Number(payload.sub);
-    return Number.isInteger(id) && id > 0 ? id : null;
+    // Tokens issued before versioning carry no v — they read as 0, which
+    // never matches a real session_version, so they expire on next use.
+    const version = Number(payload.v ?? 0);
+    return Number.isInteger(id) && id > 0 ? { id, version } : null;
   } catch {
     return null; // expired, tampered, or malformed — treat as signed out
   }
@@ -125,9 +129,14 @@ export async function getCurrentUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const userId = await readSessionToken(token);
-  if (!userId) return null;
-  return (await db.findUserById(userId)) ?? null;
+  const sess = await readSessionToken(token);
+  if (!sess) return null;
+  const user = await db.findUserById(sess.id);
+  if (!user) return null;
+  // A password reset bumps session_version, killing every older token — so a
+  // stolen session does not survive the victim changing their password.
+  if ((user.session_version ?? 1) !== sess.version) return null;
+  return user;
 }
 
 /** Route-handler shorthand: the user, or a ready-made 401 response body. */
@@ -177,4 +186,8 @@ export async function consumePasswordReset(rawToken: string): Promise<number | n
 
 export function updatePassword(userId: number, passwordHash: string) {
   return db.updatePassword(userId, passwordHash);
+}
+
+export function bumpSessionVersion(userId: number) {
+  return db.bumpSessionVersion(userId);
 }

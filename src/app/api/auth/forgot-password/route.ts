@@ -16,8 +16,9 @@ const schema = z.object({ email: z.string().trim().toLowerCase().email('enter a 
  * Always answers 200 with the same body whether or not the email exists —
  * anything else turns this endpoint into an account enumeration oracle.
  *
- * Until an email provider is wired up the reset link is returned in the
- * response for local testing, and hidden in production.
+ * The link goes out over Resend (same provider as the daily digest). In dev,
+ * without RESEND_API_KEY, the link is returned in the response for local
+ * testing instead.
  */
 export async function POST(request: Request) {
   const limited = await rateLimit(`forgot:${clientIp(request)}`, LIMITS.forgotPassword);
@@ -28,19 +29,54 @@ export async function POST(request: Request) {
     if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
 
     const { email } = schema.parse(body);
-    const user = await findUserByEmail(email);
     const generic = { ok: true, message: 'If that email has an account, a reset link is on its way.' };
 
+    // Checked before the user lookup so the response is identical whether or
+    // not the account exists — and honest, instead of claiming an email that
+    // can never be sent.
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey && process.env.NODE_ENV === 'production') {
+      console.error('[forgot-password] RESEND_API_KEY is not configured');
+      return NextResponse.json({ error: 'Password reset is unavailable right now. Please try again later.' }, { status: 503 });
+    }
+
+    const user = await findUserByEmail(email);
     if (!user) return NextResponse.json(generic);
 
     const token = generateResetToken();
     await createPasswordReset(user.id, token);
 
-    const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const site = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const resetUrl = `${site}/reset-password?token=${token}`;
 
-    // TODO: send `resetUrl` via Resend/Postmark here.
-    if (process.env.NODE_ENV === 'production') return NextResponse.json(generic);
-    return NextResponse.json({ ...generic, dev_reset_url: resetUrl });
+    if (!apiKey) return NextResponse.json({ ...generic, dev_reset_url: resetUrl });
+
+    const sent = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'DealFlow <onboarding@resend.dev>',
+        to: [user.email],
+        subject: 'Reset your DealFlow password',
+        text: [
+          `Hi ${user.name},`,
+          ``,
+          `Someone asked to reset your DealFlow password. If that was you, open this link in the next 30 minutes:`,
+          ``,
+          resetUrl,
+          ``,
+          `If it wasn't you, ignore this email — your password stays as it is.`,
+        ].join('\n'),
+      }),
+    });
+    if (!sent.ok) {
+      console.error('[forgot-password] resend failed for user', user.id, await sent.text());
+      return NextResponse.json({ error: 'Password reset is unavailable right now. Please try again later.' }, { status: 503 });
+    }
+
+    return NextResponse.json(
+      process.env.NODE_ENV === 'production' ? generic : { ...generic, dev_reset_url: resetUrl }
+    );
   } catch (err) {
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? 'Invalid request' }, { status: 400 });

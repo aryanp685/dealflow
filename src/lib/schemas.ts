@@ -129,10 +129,23 @@ export const PLANS = {
   pro: { key: 'pro', label: 'Pro', max_active_deals: Infinity, max_brands: Infinity, price_inr: 799, price_usd: 19, quarterly_inr: 1999, quarterly_usd: 49, yearly_inr: 7990, yearly_usd: 190 },
 } as const;
 
+// One-time launch offer: Pro, forever. Granted with a NULL expiry, which
+// effectivePlan() already reads as "never lapses". Only 50 are sold — both
+// /api/checkout and the webhooks enforce the cap.
+export const LIFETIME_CAP = 50;
+export const LIFETIME_PRICE = { INR: 7499, USD: 149 } as const;
+
 // Both rails charge in minor units (paise / cents). Every webhook refuses any
 // captured payment whose amount is not exactly the plan price, so a ₹1 payment
 // can never unlock Pro.
 export function expectedMinorUnits(plan: string, billing: string, currency: 'INR' | 'USD'): number | null {
+  // Webhooks cast the provider's currency string into this type — refuse
+  // anything unexpected rather than pricing it as USD.
+  if (currency !== 'INR' && currency !== 'USD') return null;
+  if (billing === 'lifetime') {
+    if (plan !== 'pro') return null;
+    return LIFETIME_PRICE[currency] * 100;
+  }
   const p = PLANS[plan as PlanKey];
   if (!p) return null;
   const value =

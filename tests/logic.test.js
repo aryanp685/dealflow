@@ -299,6 +299,30 @@ test('digest with nothing due says so', () => {
   assert.equal(reminderDigest([]), 'Nothing needs your attention today. 🎉');
 });
 
+/* ------------------------------------------------------- TDS sections */
+
+const { tdsSectionFor } = require('../test-build/money.js');
+
+test('tds sections map to the right statute', () => {
+  assert.equal(tdsSectionFor(10), '194J');
+  assert.equal(tdsSectionFor(5), '194H');
+  assert.equal(tdsSectionFor(2), '194O');
+  assert.equal(tdsSectionFor(20), '206AA');
+  assert.equal(tdsSectionFor(0), null);
+  assert.equal(tdsSectionFor(7), null, 'custom percentages must not guess a section');
+});
+
+test('a 2% TDS invoice cites 194O, not 194H', () => {
+  const list = buildReminders([deal({
+    status: 'delivered', payment_status: 'not_invoiced',
+    invoice_due_on: null, delivered_on: '2026-09-18', tds_pct: 2,
+  })], TODAY);
+  const r = list.find((x) => x.kind === 'invoice_not_sent');
+  assert.ok(r);
+  assert.match(r.send_text, /194O/);
+  assert.doesNotMatch(r.send_text, /194H/);
+});
+
 /* -------------------------------------------------------------- database */
 
 const fs = require('node:fs');
@@ -378,6 +402,28 @@ test('updateDeal changes only what it is given', async () => {
   assert.equal(updated.tds_pct, 5);
   assert.equal(updated.deal_value, 45000, 'untouched fields must survive');
   assert.match(updated.updated_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, 'updated_at must be stamped');
+});
+
+test('lifetime sales are counted for the 50-spot cap', async () => {
+  const user = await mkUser('lifetime@test.com');
+  assert.equal(await store.countLifetimeSales(), 0);
+  await store.insertPayment({
+    provider: 'razorpay', provider_payment_id: 'pay_life_1', user_id: user.id,
+    plan: 'pro', billing: 'lifetime', amount: 749900, currency: 'INR',
+  });
+  await store.insertPayment({
+    provider: 'stripe', provider_payment_id: 'cs_monthly_1', user_id: user.id,
+    plan: 'creator', billing: 'monthly', amount: 900, currency: 'USD',
+  });
+  assert.equal(await store.countLifetimeSales(), 1, 'only lifetime billings count');
+});
+
+test('lifetime pricing is exact and Pro-only', () => {
+  const { expectedMinorUnits } = require('../test-build/schemas.js');
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'INR'), 749900);
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'USD'), 14900);
+  assert.equal(expectedMinorUnits('creator', 'lifetime', 'INR'), null);
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'EUR'), null);
 });
 
 test('deleting a deal leaves the user intact', async () => {

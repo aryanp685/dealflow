@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import Stripe from 'stripe';
 import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { PLANS, expectedMinorUnits } from '@/lib/schemas';
+import { countLifetimeSales } from '@/lib/db';
+import { LIFETIME_CAP, PLANS, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +14,15 @@ export const dynamic = 'force-dynamic';
 //   3. A placeholder link otherwise, so the flow stays testable.
 // Nothing is granted here — access is applied only by the matching webhook
 // after the payment verifies (signature + exact amount).
-const schema = z.object({
-  plan: z.enum(['creator', 'pro']),
-  billing: z.enum(['monthly', 'quarterly', 'yearly']).default('yearly'),
-  currency: z.enum(['INR', 'USD']).default('INR'),
-});
+const schema = z
+  .object({
+    plan: z.enum(['creator', 'pro']),
+    billing: z.enum(['monthly', 'quarterly', 'yearly', 'lifetime']).default('yearly'),
+    currency: z.enum(['INR', 'USD']).default('INR'),
+  })
+  .refine((d) => d.billing !== 'lifetime' || d.plan === 'pro', {
+    message: 'Lifetime is available on the Pro plan only',
+  });
 
 export async function POST(request: Request) {
   try {
@@ -28,6 +33,16 @@ export async function POST(request: Request) {
     const { plan, billing, currency } = schema.parse(body);
     const minor = expectedMinorUnits(plan, billing, currency);
     if (minor === null) return NextResponse.json({ error: 'Unknown plan' }, { status: 400 });
+
+    // The launch offer really is capped at 50 — checked here so buyers see
+    // "sold out" instead of paying, and re-checked in the webhook so two
+    // simultaneous checkouts cannot oversell it.
+    if (billing === 'lifetime' && (await countLifetimeSales()) >= LIFETIME_CAP) {
+      return NextResponse.json(
+        { error: 'The 50 lifetime spots are gone — yearly is still a great deal.' },
+        { status: 410 }
+      );
+    }
 
     const site = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -90,7 +105,7 @@ export async function POST(request: Request) {
           accept_partial: false,
           reference_id: `${user.id}-${plan}-${billing}-${Date.now()}`,
           description: `DealFlow ${PLANS[plan].label} plan — ${billing}`,
-          customer: { name: user.name, email: user.email, contact: '' },
+          customer: { name: user.name, email: user.email },
           notes: { user: String(user.id), plan, billing, currency: 'INR' },
           callback_url: `${site}/app`,
           callback_method: 'get',

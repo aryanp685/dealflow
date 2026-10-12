@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { z } from 'zod';
-import { consumePasswordReset, hashPassword, updatePassword } from '@/lib/auth';
+import { bumpSessionVersion, consumePasswordReset, hashPassword, updatePassword } from '@/lib/auth';
 import { LIMITS, clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     }
 
     await updatePassword(userId, await hashPassword(password));
+    // Kill every existing session — a stolen cookie must not survive the reset.
+    await bumpSessionVersion(userId);
     return NextResponse.json({ ok: true, message: 'Password updated. You can sign in now.' });
   } catch (err) {
     if (err instanceof ZodError) {

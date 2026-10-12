@@ -7,16 +7,21 @@ import { LIMITS, clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  // Keyed on IP + email so one attacker cannot lock out a whole office behind
-  // a shared NAT, and cannot spray one password across every account either.
-  const limited = await rateLimit(`login:${clientIp(request)}`, LIMITS.login);
-  if (!limited.ok) return tooManyRequests(limited.retryAfterSeconds, 'login');
-
   try {
     const body = await request.json().catch(() => null);
     if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
 
     const { email, password } = loginSchema.parse(body);
+
+    // Two buckets: a strict per-account one (8 tries per email per IP, so a
+    // shared office NAT never gets locked out by someone else's typos) in
+    // front of a generous per-IP one (stops password spraying across accounts).
+    const ip = clientIp(request);
+    const perAccount = await rateLimit(`login:${ip}:${email}`, LIMITS.login);
+    if (!perAccount.ok) return tooManyRequests(perAccount.retryAfterSeconds, 'login');
+    const perIp = await rateLimit(`login-ip:${ip}`, LIMITS.loginIp);
+    if (!perIp.ok) return tooManyRequests(perIp.retryAfterSeconds, 'login');
+
     const user = await findUserByEmail(email);
 
     /* Same message for unknown email and wrong password — never leak which
@@ -25,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email or password is incorrect' }, { status: 401 });
     }
 
-    await setSessionCookie(await createSessionToken(user.id));
+    await setSessionCookie(await createSessionToken(user.id, user.session_version ?? 1));
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, plan: user.plan } });
   } catch (err) {
     if (err instanceof ZodError) {

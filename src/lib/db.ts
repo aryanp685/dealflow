@@ -52,10 +52,16 @@ export async function createUser(input: { name: string; email: string; passwordH
 export async function updatePassword(userId: number, passwordHash: string) {
   return active.updatePassword(userId, passwordHash);
 }
+export async function bumpSessionVersion(userId: number) {
+  return active.bumpSessionVersion(userId);
+}
+export async function countLifetimeSales() {
+  return active.countLifetimeSales();
+}
 export async function getPlanInfo(userId: number) {
   return active.getPlanInfo(userId);
 }
-export async function grantPlan(userId: number, plan: string, planExpiresAt: number) {
+export async function grantPlan(userId: number, plan: string, planExpiresAt: number | null) {
   return active.grantPlan(userId, plan, planExpiresAt);
 }
 

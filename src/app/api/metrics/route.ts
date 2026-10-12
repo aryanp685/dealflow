@@ -62,18 +62,28 @@ export async function GET() {
 
       if (deal.payment_status === 'not_invoiced' && deal.status === 'negotiating') continue;
 
-      // Agreed and not yet paid — money still to come.
+      // Monthly trend tracks everything past first contact ("gross agreed").
+      const month = monthOf(deal.agreed_on ?? '');
+      const row = byMonth.get(month) ?? { month, gross: 0, collected: 0 };
+      row.gross = round2(row.gross + blend(m.gross));
+      byMonth.set(month, row);
+
+      // "Money stuck" counts only earned or billed money: delivered work plus
+      // anything with payment activity. Agreed-but-untouched deals are
+      // pipeline, not stuck — counting them here double-counts the Pipeline
+      // KPI and inflates the "current" ageing bucket.
+      const billed =
+        deal.payment_status !== 'not_invoiced' ||
+        deal.status === 'delivered' ||
+        deal.status === 'invoiced';
+      if (!billed) continue;
+
       const owed =
         deal.advance_pct > 0 && deal.payment_status === 'advance_paid' ? m.balance_due : m.net_receivable;
       const owedInr = blend(owed);
       outstanding += owedInr;
       if (deal.currency === 'INR') inrOutstanding += owed;
       else usdOutstanding += owed;
-
-      const month = monthOf(deal.agreed_on ?? '');
-      const row = byMonth.get(month) ?? { month, gross: 0, collected: 0 };
-      row.gross = round2(row.gross + blend(m.gross));
-      byMonth.set(month, row);
 
       const days = overdueDays(deal.invoice_due_on, deal.payment_status, today);
       const bucket = ageingBucket(days);
@@ -109,6 +119,8 @@ export async function GET() {
 
     const paidCount = deals.filter((d) => d.payment_status === 'paid').length;
     const closedCount = deals.filter((d) => d.status !== 'negotiating' && d.status !== 'cancelled').length;
+    // gross skips cancelled deals, so the average must divide by the same set.
+    const liveCount = deals.filter((d) => d.status !== 'cancelled' && d.payment_status !== 'cancelled').length;
 
     const monthly = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-12);
     const monthlyGross = monthly.map((m) => m.gross);
@@ -133,7 +145,7 @@ export async function GET() {
         total_deals: deals.length,
         paid: paidCount,
         conversion_rate: closedCount > 0 ? Math.round((paidCount / closedCount) * 100) : 0,
-        avg_deal_value: deals.length > 0 ? round2(gross / deals.length) : 0,
+        avg_deal_value: liveCount > 0 ? round2(gross / liveCount) : 0,
         has_usd: hasUsd,
       },
       by_status: byStatus,

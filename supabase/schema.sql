@@ -11,9 +11,15 @@ create table if not exists users (
   plan            text    not null default 'free'
                   check (plan in ('free','creator','pro')),
   plan_expires_at double precision,
+  -- Bumped on every password reset; JWTs carrying an older version stop
+  -- working, so a stolen session does not survive the reset.
+  session_version integer not null default 1,
   created_at      text    not null
                   default to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
+
+-- If this schema ran before session_version existed:
+--   alter table users add column if not exists session_version integer not null default 1;
 
 create table if not exists payments (
   id                  integer generated always as identity primary key,

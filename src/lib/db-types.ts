@@ -6,6 +6,7 @@ export type User = {
   email: string;
   plan: string;
   plan_expires_at: number | null;
+  session_version: number;
   created_at: string;
 };
 
@@ -62,8 +63,11 @@ export interface DbDriver {
   findUserById(id: number): Promise<User | undefined>;
   createUser(input: { name: string; email: string; passwordHash: string }): Promise<User>;
   updatePassword(userId: number, passwordHash: string): Promise<void>;
+  bumpSessionVersion(userId: number): Promise<void>;
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
-  grantPlan(userId: number, plan: string, planExpiresAt: number): Promise<void>;
+  // A null expiry means "never lapses" — that is how the lifetime deal is stored.
+  grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
+  countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;
   insertReset(tokenHash: string, userId: number, expiresAt: number): Promise<void>;
@@ -71,6 +75,8 @@ export interface DbDriver {
   markResetUsed(tokenHash: string, usedAt: number): Promise<void>;
 
   findPayment(provider: string, paymentId: string): Promise<PaymentRow | undefined>;
+  // amount is ALWAYS minor units (paise / cents) on every rail, so future
+  // revenue reports can sum the column without per-provider conversion.
   insertPayment(p: {
     provider: string;
     provider_payment_id: string;

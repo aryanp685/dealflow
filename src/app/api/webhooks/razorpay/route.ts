@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import { findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
-import { expectedPaymentPaise } from '@/lib/schemas';
+import { countLifetimeSales, findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
+import { LIFETIME_CAP, expectedPaymentPaise } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,10 +105,24 @@ export async function POST(request: Request) {
     console.warn('[webhook] amount mismatch — not granting', { paymentId, amount: payment.amount, expected });
     return NextResponse.json({ received: true, handled: false, error: 'amount mismatch' });
   }
-  const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
-  const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+  // Lifetime grants a null expiry (never lapses). The 50-spot cap is
+  // re-checked here so two simultaneous checkouts cannot oversell it; a
+  // payment that arrives after the cap needs a manual refund, so it is logged
+  // loudly rather than granted silently.
+  let expiresAt: number | null;
+  if (billing === 'lifetime') {
+    if ((await countLifetimeSales()) >= LIFETIME_CAP) {
+      console.warn('[webhook] lifetime cap reached — payment needs a manual refund', { paymentId, userId });
+      return NextResponse.json({ received: true, handled: false, error: 'lifetime sold out' });
+    }
+    expiresAt = null;
+  } else {
+    const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
+    const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+    expiresAt = base + durationMs;
+  }
 
-  await grantPlan(userId, plan, base + durationMs);
+  await grantPlan(userId, plan, expiresAt);
   await insertPayment({
     provider: 'razorpay',
     provider_payment_id: paymentId,

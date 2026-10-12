@@ -13,6 +13,16 @@ export const TDS_SECTIONS = [
   { pct: 20, section: '206AA', label: 'No PAN on file' },
 ] as const;
 
+/** Statute for a TDS percentage. Returns null for 0% and for custom
+ * percentages — guessing a section in a legal notice is worse than omitting
+ * it, so callers must handle null explicitly. */
+export function tdsSectionFor(pct: number): string | null {
+  const p = Math.round(num(pct));
+  if (p <= 0) return null;
+  const known: Record<number, string> = { 2: '194O', 5: '194H', 10: '194J', 20: '206AA' };
+  return known[p] ?? null;
+}
+
 export type Currency = 'INR' | 'USD';
 
 export interface MoneyInput {
@@ -175,6 +185,8 @@ export function shiftDaysISO(iso: string | Date, n: number): string {
 // Dashboard headline numbers blend USD deals into INR at a fixed rate so a
 // $900 deal never reads as ₹900. Exports and per-deal figures always keep the
 // original currency; the rate is surfaced in the API so the UI can say so.
+// Fixed by design (no FX API dependency) — review quarterly and bump when the
+// market rate drifts more than ~5%.
 export const USD_INR = 85;
 
 /** Integer paise — the unit every equality check on money should use. */

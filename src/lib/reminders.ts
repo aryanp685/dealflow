@@ -1,5 +1,5 @@
 import type { Deal } from './db';
-import { computeDealMoney, daysUntil, overdueDays, formatDate, formatMoney, shiftDaysISO, todayISO } from './money';
+import { computeDealMoney, daysUntil, overdueDays, formatDate, formatMoney, shiftDaysISO, todayISO, tdsSectionFor } from './money';
 import { msmeInterest, SAMADHAAN_URL, UDYAM_URL } from './msme';
 
 /**
@@ -106,6 +106,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       : '';
     const contact = deal.brand_contact || deal.brand;
     const wa = waNumber(deal.brand_whatsapp);
+    const tdsSection = tdsSectionFor(deal.tds_pct);
 
     /* ---- 1. Deliverable deadline ---- */
     if (
@@ -174,7 +175,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
         ``,
         `Please find the invoice attached for ${invoiceValue}${deal.gst_applicable ? ' (incl. 18% GST)' : ''}.`,
         `${termsLine}`
-          + (deal.tds_pct > 0 ? `\nKindly deduct TDS at ${deal.tds_pct}% u/s ${deal.tds_pct >= 10 ? '194J' : '194H'} and share Form 16A at your convenience.` : '')
+          + (deal.tds_pct > 0 ? `\nKindly deduct TDS at ${deal.tds_pct}%${tdsSection ? ` u/s ${tdsSection}` : ''} and share Form 16A at your convenience.` : '')
           + ``,
         `Bank details are on the invoice. Let me know if you need anything else from my side.`,
         ``,

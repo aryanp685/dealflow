@@ -16,7 +16,7 @@ import {
   listItem,
 } from "@/components/ui";
 import { formatMoney } from "@/lib/money";
-import { PLANS, type PlanKey } from "@/lib/schemas";
+import { LIFETIME_PRICE, PLANS, type PlanKey } from "@/lib/schemas";
 import Logo from "@/components/logo";
 import type { Deal } from "@/lib/db";
 
@@ -252,7 +252,7 @@ export default function AppShell({
           ) : (
             <Reminders reminders={reminders} urgent={urgent} notify={notify} />
           ))}
-        {tab === "pricing" && <Pricing current={plan?.key ?? "free"} />}
+        {tab === "pricing" && <Pricing current={plan?.key ?? "free"} notify={notify} />}
       </m.main>
 
       <DealForm
@@ -332,7 +332,16 @@ const BILLING_META: Record<
   monthly: { suffix: "/mo", months: 1, label: "Monthly" },
 };
 
-const TIERS = [
+type Tier = {
+  key: string;
+  name: string;
+  note: string;
+  popular?: boolean;
+  features: string[];
+  coming?: string;
+};
+
+const TIERS: Tier[] = [
   {
     key: "free",
     name: "Free",
@@ -361,14 +370,13 @@ const TIERS = [
   {
     key: "pro",
     name: "Pro",
-    note: "managers & agencies",
+    note: "power users & managers",
     features: [
       "Everything in Creator",
-      "Manage up to 10 creators",
-      "Brand-wise revenue reports",
-      "Auto monthly tax summary",
-      "Priority support",
+      "Priority support — replies within 24 hours",
+      "Early access to new features + roadmap votes",
     ],
+    coming: "Coming soon on Pro: team workspaces, brand-wise revenue reports, auto monthly tax summary.",
   },
 ];
 
@@ -393,15 +401,27 @@ function planPrice(
       : p.price_usd;
 }
 
-function Pricing({ current }: { current: string }) {
+function Pricing({
+  current,
+  notify,
+}: {
+  current: string;
+  notify: (msg: string, tone?: "ok" | "err") => void;
+}) {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
   const [billing, setBilling] = useState<Billing>("yearly");
   const checkout = useMutation({
-    mutationFn: async (tier: string) => {
+    mutationFn: async ({
+      tier,
+      billing: override,
+    }: {
+      tier: string;
+      billing?: Billing | "lifetime";
+    }) => {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan: tier, billing, currency }),
+        body: JSON.stringify({ plan: tier, billing: override ?? billing, currency }),
       });
       if (!res.ok)
         throw new Error(
@@ -411,9 +431,15 @@ function Pricing({ current }: { current: string }) {
       return res.json();
     },
     onSuccess: (j) => {
-      if (j.url) window.location.href = j.url;
+      // An unconfigured server answers a placeholder link — surface the
+      // warning instead of redirecting the buyer to a dead URL.
+      if (j.configured && j.url) window.location.href = j.url;
+      else notify(j.warning ?? "Payments are not configured yet", "err");
     },
   });
+
+  const lifetimeLabel =
+    currency === "INR" ? formatMoney(LIFETIME_PRICE.INR) : `$${LIFETIME_PRICE.USD}`;
 
   const sym = currency === "INR" ? "₹" : "$";
 
@@ -511,10 +537,15 @@ function Pricing({ current }: { current: string }) {
                   <li key={f}>{f}</li>
                 ))}
               </ul>
+              {t.coming && (
+                <div className="t-muted dim" style={{ marginBottom: 16, fontSize: 13 }}>
+                  {t.coming}
+                </div>
+              )}
               <button
                 className={`btn ${t.popular ? "primary" : ""} btn-block`}
                 disabled={isCurrent || t.key === "free" || checkout.isPending}
-                onClick={() => checkout.mutate(t.key)}
+                onClick={() => checkout.mutate({ tier: t.key })}
               >
                 {isCurrent
                   ? "Current plan"
@@ -532,25 +563,16 @@ function Pricing({ current }: { current: string }) {
       <m.div className="card" variants={listItem}>
         <h3 className="card-title">Lifetime deal — launch only</h3>
         <p className="card-sub">
-          <strong>{formatMoney(7499)} / $149 one-time.</strong> First 50
-          customers, then it&apos;s gone. This is the cash-flow lever: 50 sales
-          funds the next six months of development before a single subscription
-          renews.
+          <strong>{lifetimeLabel} one-time.</strong> Pro, forever — no renewals,
+          no expiry. Only 50 spots, then it&apos;s gone for good.
         </p>
-        <div className="money-preview">
-          <div className="line">
-            <span>Break-even on hosting</span>
-            <span>~9 lifetime sales</span>
-          </div>
-          <div className="line">
-            <span>50 lifetime sales</span>
-            <span>{formatMoney(374950)}</span>
-          </div>
-          <div className="line total">
-            <span>+ 100 Creator subs at ₹299</span>
-            <span>{formatMoney(29900)}/mo recurring</span>
-          </div>
-        </div>
+        <button
+          className="btn primary btn-block"
+          disabled={checkout.isPending}
+          onClick={() => checkout.mutate({ tier: "pro", billing: "lifetime" })}
+        >
+          {checkout.isPending ? "Opening…" : `Pay ${lifetimeLabel} once — Pro forever`}
+        </button>
         {checkout.isError && (
           <div className="notice" style={{ marginTop: 14 }}>
             {(checkout.error as Error).message}

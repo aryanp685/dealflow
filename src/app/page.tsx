@@ -253,7 +253,7 @@ export default function LandingPage() {
               name="Pro" amount={formatMoney(7990)} per="/year" savePct={17}
               note="≈ ₹666/mo — best value"
               alts={[`${formatMoney(1999)} / 3 months — save 17%`, `${formatMoney(799)} / month`]}
-              features={['Everything in Creator', 'Manage up to 10 creators', 'Brand-wise revenue reports', 'Auto monthly tax summary', 'Priority support']}
+              features={['Everything in Creator', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team workspaces & CA reports (coming soon — Pro members first)']}
               cta="Pay once for the year" href="/signup"
             /></Reveal>
           </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
-import { expectedMinorUnits } from '@/lib/schemas';
+import { countLifetimeSales, findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
+import { LIFETIME_CAP, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,17 +64,28 @@ export async function POST(request: Request) {
   const existing = await getPlanInfo(userId);
   if (!existing) return NextResponse.json({ received: true, handled: false, error: 'unknown user' });
 
-  const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
-  const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+  let expiresAt: number | null;
+  if (billing === 'lifetime') {
+    if ((await countLifetimeSales()) >= LIFETIME_CAP) {
+      console.warn('[stripe-webhook] lifetime cap reached — payment needs a manual refund', { session: session.id, userId });
+      return NextResponse.json({ received: true, handled: false, error: 'lifetime sold out' });
+    }
+    expiresAt = null;
+  } else {
+    const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
+    const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+    expiresAt = base + durationMs;
+  }
 
-  await grantPlan(userId, plan, base + durationMs);
+  await grantPlan(userId, plan, expiresAt);
   await insertPayment({
     provider: 'stripe',
     provider_payment_id: session.id,
     user_id: userId,
     plan,
     billing,
-    amount: (session.amount_total ?? 0) / 100,
+    // Minor units (cents), matching the Razorpay rail — see DbDriver.insertPayment.
+    amount: session.amount_total ?? 0,
     currency,
   });
 

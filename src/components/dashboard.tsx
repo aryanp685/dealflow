@@ -99,7 +99,7 @@ export default function Dashboard({
           label="Money stuck"
           value={t.outstanding}
           format={(n) => formatMoney(n)}
-          note="Invoiced + delivered, not paid"
+          note="Earned or billed, not yet paid"
           tone="bad"
         />
         <Kpi
@@ -160,7 +160,7 @@ export default function Dashboard({
           <h3 className="card-title">This year so far</h3>
           <p className="card-sub">Net of TDS, including GST where applicable.</p>
           {metrics.counts.has_usd && (
-            <p className="card-sub">USD deals blended at ₹{t.usd_inr_rate}/$ in headline totals.</p>
+            <p className="card-sub">USD deals blended at a fixed ₹{t.usd_inr_rate}/$ in headline totals.</p>
           )}
           <div className="stat-list">
             <Stat k="Gross deal value" v={formatMoney(t.gross)} />
@@ -319,7 +319,10 @@ function CollectPayment({
         body: JSON.stringify({
           brand: selected.brand,
           title: selected.title,
-          amount: computeDealMoney(selected).net_receivable,
+          // The invoice total, not the net: TDS is the payer's statutory
+          // deduction with its own Form 16A trail. Charging the net would
+          // under-collect against the invoice and skip that trail.
+          amount: computeDealMoney(selected).invoice_total,
           currency: selected.currency,
           note: `${selected.title} — ${selected.invoice_number || 'brand deal'}`,
           log_deal: false,
@@ -346,8 +349,8 @@ function CollectPayment({
     <m.div className="card" variants={listItem}>
       <h3 className="card-title">💸 Collect a payment</h3>
       <p className="card-sub">
-        Generate a Razorpay Payment Link and send it on WhatsApp. UPI payments under ₹2,000 carry zero MDR — you keep
-        the full amount.
+        Generate a Razorpay Payment Link and send it on WhatsApp. Links collect the full invoice amount — the brand
+        deducts TDS and deposits it against your PAN separately. UPI payments under ₹2,000 carry zero MDR.
       </p>
       <div className="row">
         <label className="field" style={{ marginBottom: 0 }}>

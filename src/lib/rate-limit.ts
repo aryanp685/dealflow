@@ -13,6 +13,7 @@ export type LimitSpec = { limit: number; windowMs: number };
 
 export const LIMITS = {
   login: { limit: 8, windowMs: 10 * 60_000 },
+  loginIp: { limit: 30, windowMs: 10 * 60_000 },
   signup: { limit: 5, windowMs: 60 * 60_000 },
   forgotPassword: { limit: 3, windowMs: 60 * 60_000 },
   resetPassword: { limit: 5, windowMs: 60 * 60_000 },

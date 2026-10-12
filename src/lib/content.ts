@@ -37,4 +37,5 @@ export const offers = [
   { name: 'Creator — yearly', price: '2990', priceCurrency: 'INR' },
   { name: 'Pro', price: '799', priceCurrency: 'INR' },
   { name: 'Pro — yearly', price: '7990', priceCurrency: 'INR' },
+  { name: 'Pro — lifetime', price: '7499', priceCurrency: 'INR' },
 ];
