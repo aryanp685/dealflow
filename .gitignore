@@ -12,3 +12,4 @@ next-env.d.ts.bak
 .vercel
 .env*
 .deploy-secrets
+tsconfig.tsbuildinfo
