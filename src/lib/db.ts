@@ -2,17 +2,10 @@ import type { DbDriver } from './db-types';
 import { driver as sqliteDriver, resetDbHandle as resetSqlite } from './db-sqlite';
 import { driver as pgDriver } from './db-postgres';
 
-// Data layer facade. Every query is one plain SQL statement in one of two
-// drivers: SQLite (local dev, zero setup) or Postgres (Supabase) once
-// DATABASE_URL is set. Money and date math live in ./money.ts and are shared
-// with the client, so a figure shown in the UI can never disagree with one
-// computed by the API.
 
 export { computeDealMoney, overdueDays, ageingBucket, daysUntil, round2, clamp, todayISO, toINR, USD_INR, toPaise } from './money';
 export type { Deal, User, UserAuthRow, PlanInfo, ResetRow, PaymentRow } from './db-types';
 
-// Both drivers are side-effect-free at module load, so importing both is
-// safe; the inactive one is simply never called.
 const active: DbDriver = process.env.DATABASE_URL ? pgDriver : sqliteDriver;
 
 export async function listUsers() {
@@ -93,7 +86,6 @@ export async function insertPayment(p: {
   return active.insertPayment(p);
 }
 
-// Test-only: drop the SQLite handle so a new DEALFLOW_DB_PATH takes effect.
 export async function resetDbHandle() {
   resetSqlite();
 }

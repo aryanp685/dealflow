@@ -6,15 +6,8 @@ import type { PlanInfo } from '@/lib/db-types';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-// Daily digest, fired by Vercel Cron (vercel.json, 08:30 IST). Vercel sends
-// `Authorization: Bearer <CRON_SECRET>` with cron invocations; the same header
-// works for a manual trigger. Without RESEND_API_KEY the route reports what
-// it would have sent instead of emailing.
-const DAILY_CAP = 80; // Resend free tier is 100/day — stay under it
+const DAILY_CAP = 80;
 
-// Renewals are a link, never an auto-debit mandate — UPI mandates fail for a
-// third to a half of Indian users at creation, and failed debits read as a
-// broken product. Paid users get nudged in the last week of their plan.
 function renewalNotice(plan: PlanInfo | undefined, site: string): string | null {
   if (!plan || plan.plan === 'free' || plan.plan_expires_at === null) return null;
   const daysLeft = Math.ceil((plan.plan_expires_at - Date.now()) / 86_400_000);
@@ -49,8 +42,6 @@ export async function GET(request: Request) {
       continue;
     }
 
-    // onboarding@resend.dev is Resend's test sender (only reaches your own
-    // inbox). Set RESEND_FROM to an address on a verified domain for real use.
     const body = {
       from: process.env.RESEND_FROM || 'DealFlow <onboarding@resend.dev>',
       to: [user.email],

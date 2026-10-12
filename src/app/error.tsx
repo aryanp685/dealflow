@@ -2,11 +2,6 @@
 
 import { useEffect } from 'react';
 
-/**
- * App-level error boundary. Without this, any render-time throw shows the
- * default Next.js white screen — which for a paid product reads as "this
- * thing is broken" and kills the sale.
- */
 export default function ErrorBoundary({
   error,
   reset,
@@ -15,7 +10,6 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Route to your logger of choice (Sentry, Axiom) once you have one.
     console.error('[DealFlow render error]', error);
   }, [error]);
 

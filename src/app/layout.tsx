@@ -75,9 +75,6 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // suppressHydrationWarning: browser extensions rewrite attributes on
-    // <html>/<body> before React hydrates; without this every visitor with an
-    // extension sees a hydration error in the console.
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>

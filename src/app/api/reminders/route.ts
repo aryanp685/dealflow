@@ -5,10 +5,6 @@ import { buildReminders, reminderDigest } from '@/lib/reminders';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/reminders        -> { reminders, digest, count, urgent }
- * GET /api/reminders?text=1 -> plain-text digest (pipe into WhatsApp/email)
- */
 export async function GET(request: Request) {
   try {
     const user = await requireUser();

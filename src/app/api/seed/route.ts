@@ -5,17 +5,10 @@ import { shiftDaysISO, todayISO } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * POST /api/seed — load six realistic deals so a new user sees the product
- * working in five seconds instead of staring at an empty screen. Scoped to the
- * signed-in creator, and it no-ops if they already have data.
- */
 export async function POST() {
   try {
     const user = await requireUser();
 
-    // Seeding on top of real data doubles every deal (and wrecks the free
-    // limit), so the button is one-time per account.
     if ((await listDeals(user.id)).length > 0) {
       return NextResponse.json(
         { error: 'Sample data is already loaded — this button works once per account.' },

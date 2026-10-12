@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Columns a PATCH may touch; anything else in the body is dropped. */
 const PATCHABLE = new Set([
   'brand', 'brand_contact', 'brand_email', 'brand_whatsapp', 'title', 'platform',
   'status', 'deal_value', 'currency', 'advance_pct', 'agreed_on', 'deliver_by',
@@ -59,9 +58,6 @@ export async function PATCH(req: Request, { params }: Params) {
       updates[key] = key === 'gst_applicable' ? (value ? 1 : 0) : value;
     }
 
-    /* Moving a deal through the pipeline stamps the matching date, so the
-       creator isn't doing double bookkeeping. Explicit dates in the same
-       PATCH always win. */
     const today = todayISO();
     if (updates.status === 'delivered' && !('delivered_on' in updates) && !existing.delivered_on) {
       updates.delivered_on = today;
@@ -75,7 +71,6 @@ export async function PATCH(req: Request, { params }: Params) {
     if (updates.payment_status === 'invoiced' && !('invoice_sent_on' in updates) && !existing.invoice_sent_on) {
       updates.invoice_sent_on = today;
     }
-    /* Marking paid without a date implies the invoice went out at some point. */
     if (updates.payment_status === 'paid' && !('invoice_sent_on' in updates) && !existing.invoice_sent_on) {
       updates.invoice_sent_on = today;
     }

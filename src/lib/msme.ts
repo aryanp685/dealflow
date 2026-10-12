@@ -1,7 +1,3 @@
-// Section 15 of the MSMED Act 2006: a buyer must pay an MSME (Udyam-registered)
-// supplier within 45 days of acceptance. Past that, compound interest at three
-// times the RBI bank rate is legally payable. This module does that one
-// calculation so the demand letter and the free tool agree to the paisa.
 
 import { round2 } from './money';
 
@@ -20,11 +16,6 @@ export interface MsmeInterest {
   total_due: number;
 }
 
-/**
- * Compound interest at 3× the bank rate, compounded monthly over the days
- * late. Fractional months use the same exponent so day 50 and day 51 differ
- * by exactly one day of interest.
- */
 export function msmeInterest(
   principal: number,
   daysLate: number,

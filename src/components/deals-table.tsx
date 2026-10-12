@@ -43,8 +43,6 @@ export default function DealsTable({
   const [filter, setFilter] = useState<Filter>('all');
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  // Every hook stays above the early return — useMemo/useMutation after a
-  // conditional return break the Rules of Hooks as soon as isLoading flips.
   const filtered = useMemo(() => {
     if (filter === 'all') return deals;
     if (filter === 'paid') return deals.filter((d) => d.payment_status === 'paid');

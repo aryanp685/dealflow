@@ -4,16 +4,10 @@ import fs from 'node:fs';
 import type { DbDriver } from './db-types';
 import { normalizeValue } from './db-types';
 
-// Local/dev driver. Zero setup: a file at ./data/dealflow.db, migrated on
-// first open. Production runs the Postgres driver (see db-postgres.ts) as soon
-// as DATABASE_URL is set.
 
 let _db: Database.Database | null = null;
 
 export function handle(): Database.Database {
-  // Vercel's filesystem is ephemeral — a SQLite file there accepts writes and
-  // then silently loses them on the next cold start. Fail loudly instead of
-  // pretending persistence works.
   if (process.env.VERCEL) {
     throw new Error('DATABASE_URL must be set when running on Vercel — SQLite does not persist on serverless.');
   }
@@ -30,7 +24,7 @@ export function handle(): Database.Database {
 
 export function resetDbHandle() {
   if (_db) {
-    try { _db.close(); } catch { /* already closed */ }
+    try { _db.close(); } catch { }
     _db = null;
   }
 }
@@ -43,7 +37,7 @@ function migrate(database: Database.Database) {
     'ALTER TABLE deals ADD COLUMN escalation_contact TEXT',
     'ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1',
   ]) {
-    try { database.exec(stmt); } catch { /* fresh DB or already migrated */ }
+    try { database.exec(stmt); } catch { }
   }
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (

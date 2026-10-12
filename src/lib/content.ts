@@ -1,5 +1,3 @@
-// Single source for landing page copy and the matching JSON-LD, so the
-// structured data can never describe a question the page does not answer.
 export const faqs = [
   {
     q: 'Does this replace Zoho Invoice or Tally?',

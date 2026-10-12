@@ -7,13 +7,6 @@ import { LIFETIME_CAP, PLANS, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
-// Starts a plan upgrade. Rail order:
-//   1. Stripe Checkout when STRIPE_SECRET_KEY is set (cards + USD, INR once
-//      the India invite lands) — a hosted session with the exact plan price.
-//   2. Razorpay Payment Link API when RAZORPAY keys are set (UPI + INR).
-//   3. A placeholder link otherwise, so the flow stays testable.
-// Nothing is granted here — access is applied only by the matching webhook
-// after the payment verifies (signature + exact amount).
 const schema = z
   .object({
     plan: z.enum(['creator', 'pro']),
@@ -34,9 +27,6 @@ export async function POST(request: Request) {
     const minor = expectedMinorUnits(plan, billing, currency);
     if (minor === null) return NextResponse.json({ error: 'Unknown plan' }, { status: 400 });
 
-    // The launch offer really is capped at 50 — checked here so buyers see
-    // "sold out" instead of paying, and re-checked in the webhook so two
-    // simultaneous checkouts cannot oversell it.
     if (billing === 'lifetime' && (await countLifetimeSales()) >= LIFETIME_CAP) {
       return NextResponse.json(
         { error: 'The 50 lifetime spots are gone — yearly is still a great deal.' },
@@ -49,7 +39,6 @@ export async function POST(request: Request) {
     const rzpId = process.env.RAZORPAY_KEY_ID;
     const rzpSecret = process.env.RAZORPAY_KEY_SECRET;
 
-    /* ---------------------------------------------------------- Stripe rail */
     if (stripeKey && (currency === 'USD' || !rzpId)) {
       const stripe = new Stripe(stripeKey);
       const session = await stripe.checkout.sessions.create({
@@ -82,7 +71,6 @@ export async function POST(request: Request) {
       });
     }
 
-    /* --------------------------------------------------------- Razorpay rail */
     if (currency === 'USD') {
       return NextResponse.json(
         { error: 'USD payments need Stripe — set STRIPE_SECRET_KEY (Razorpay is INR-only here).' },

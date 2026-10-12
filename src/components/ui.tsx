@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { m, AnimatePresence } from 'motion/react';
 import clsx from 'clsx';
 
-/* ------------------------------------------------------------- entrance */
 
 export const fadeUp = {
   initial: { opacity: 0, y: 14 },
@@ -22,9 +21,7 @@ export const listItem = {
   exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
 };
 
-/* ------------------------------------------------------------------ KPI */
 
-// Eases up to its target instead of snapping.
 export function AnimatedNumber({
   value,
   format,
@@ -46,7 +43,6 @@ export function AnimatedNumber({
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      // easeOutExpo — fast start, soft landing
       const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
       setDisplay(from + delta * eased);
       if (t < 1) frame = requestAnimationFrame(tick);
@@ -54,7 +50,6 @@ export function AnimatedNumber({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, duration]);
 
   return <>{format(display)}</>;
@@ -84,13 +79,11 @@ export function Kpi({
   );
 }
 
-/* ---------------------------------------------------------------- pills */
 
 export function Pill({ tone = 'grey', children }: { tone?: string; children: React.ReactNode }) {
   return <span className={clsx('pill', `p-${tone}`)}>{children}</span>;
 }
 
-/* --------------------------------------------------------------- modal */
 
 export function Modal({
   open,
@@ -156,7 +149,6 @@ export function Modal({
   );
 }
 
-/* --------------------------------------------------------------- toast */
 
 export type ToastState = { id: number; msg: string; tone: 'ok' | 'err' | 'info' } | null;
 
@@ -196,7 +188,6 @@ export function useToast() {
   return { toast, notify };
 }
 
-/* ------------------------------------------------------------- skeleton */
 
 export function Skeleton({ className }: { className?: string }) {
   return <m.div className={clsx('skeleton', className)} variants={listItem} />;
@@ -223,7 +214,6 @@ export function DashboardSkeleton() {
   );
 }
 
-/* ------------------------------------------------------------ progress */
 
 export function BarRow({
   label,
@@ -255,7 +245,6 @@ export function BarRow({
   );
 }
 
-/* -------------------------------------------------------- empty states */
 
 export function EmptyState({
   icon,

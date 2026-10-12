@@ -2,14 +2,11 @@
 
 import { m, useReducedMotion } from 'motion/react';
 
-// Client boundary for the landing page, so the Server Component above the
-// fold stays indexable. Honours the OS reduce-motion setting.
 export default function LandingMotion({ children }: { children: React.ReactNode }) {
   const reduce = useReducedMotion();
   return <div className="land-body">{reduce ? children : <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>{children}</m.div>}</div>;
 }
 
-/** Scroll-triggered reveal. Animates once, only when actually in view. */
 export function Reveal({
   children,
   delay = 0,

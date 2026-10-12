@@ -5,10 +5,6 @@ import { LIFETIME_CAP, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
-// Stripe rail — global cards + USD (and INR once the India invite lands).
-// Mirrors the Razorpay webhook: nothing is granted unless the signature
-// verifies, the event is a completed checkout, and the charged amount is
-// exactly the plan price.
 
 export async function POST(request: Request) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -45,7 +41,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, handled: false, error: 'unknown user' });
   }
 
-  // Exact-amount check, same rule as the Razorpay rail.
   const expected = expectedMinorUnits(plan, billing, currency);
   if (expected === null || session.amount_total !== expected) {
     console.warn('[stripe-webhook] amount mismatch — not granting', {
@@ -56,7 +51,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, handled: false, error: 'amount mismatch' });
   }
 
-  // Stripe retries; a duplicate delivery must not extend the plan twice.
   const already = await findPayment('stripe', session.id);
   if (already) return NextResponse.json({ received: true, handled: true, duplicate: true });
 
@@ -84,7 +78,6 @@ export async function POST(request: Request) {
     user_id: userId,
     plan,
     billing,
-    // Minor units (cents), matching the Razorpay rail — see DbDriver.insertPayment.
     amount: session.amount_total ?? 0,
     currency,
   });

@@ -1,5 +1,7 @@
 # DealFlow 💸
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aryanp685/dealflow)
+
 **Stop losing money on brand deals.** Track every deal, deadline and invoice — then let DealFlow write the follow-up when a brand sits on your payment.
 
 Built to sell at **₹299/mo (India)** and **$9/mo (global)**. The gap: creator-side deal tools at this price essentially don't exist — Upfluence, CreatorIQ and Traackr are built for *brands* managing creator rosters and start at $400–800/mo.
@@ -61,6 +63,16 @@ The tests compile `src/lib/*` with `tsc` and run against the **real compiled out
 | `CRON_SECRET` | For the digest cron | Vercel sends it as `Authorization: Bearer` on cron runs. Without it `/api/cron/digest` answers 401 to everyone. |
 | `DEALFLOW_DB_PATH` | No | Override the SQLite file. Defaults to `./data/dealflow.db`. |
 | `NEXT_PUBLIC_SITE_URL` | No | Used for `metadataBase` / OpenGraph / sitemap URLs. |
+
+---
+
+## Deploy to Vercel
+
+1. Click **Deploy with Vercel** above (or `vercel` from this repo)
+2. Add env vars from `.env.example` — at minimum `AUTH_SECRET` and `DATABASE_URL`
+3. Run `supabase/schema.sql` once on your Supabase project, then deploy
+
+The daily digest cron (`/api/cron/digest`, 08:30 IST) is configured in `vercel.json` and runs automatically.
 
 ---
 

@@ -5,9 +5,6 @@ import { computeDealMoney, overdueDays, ageingBucket, round2, toINR, USD_INR } f
 
 export const dynamic = 'force-dynamic';
 
-// Dashboard numbers, computed server-side so the money math lives in exactly
-// one place and is covered by unit tests. Headline totals blend USD deals
-// into INR at USD_INR; per-deal figures and the CSV keep the original currency.
 export async function GET() {
   try {
     const user = await requireUser();
@@ -62,16 +59,11 @@ export async function GET() {
 
       if (deal.payment_status === 'not_invoiced' && deal.status === 'negotiating') continue;
 
-      // Monthly trend tracks everything past first contact ("gross agreed").
       const month = monthOf(deal.agreed_on ?? '');
       const row = byMonth.get(month) ?? { month, gross: 0, collected: 0 };
       row.gross = round2(row.gross + blend(m.gross));
       byMonth.set(month, row);
 
-      // "Money stuck" counts only earned or billed money: delivered work plus
-      // anything with payment activity. Agreed-but-untouched deals are
-      // pipeline, not stuck — counting them here double-counts the Pipeline
-      // KPI and inflates the "current" ageing bucket.
       const billed =
         deal.payment_status !== 'not_invoiced' ||
         deal.status === 'delivered' ||
@@ -119,7 +111,6 @@ export async function GET() {
 
     const paidCount = deals.filter((d) => d.payment_status === 'paid').length;
     const closedCount = deals.filter((d) => d.status !== 'negotiating' && d.status !== 'cancelled').length;
-    // gross skips cancelled deals, so the average must divide by the same set.
     const liveCount = deals.filter((d) => d.status !== 'cancelled' && d.payment_status !== 'cancelled').length;
 
     const monthly = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-12);

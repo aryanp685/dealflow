@@ -10,16 +10,6 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({ email: z.string().trim().toLowerCase().email('enter a valid email') });
 
-/**
- * POST /api/auth/forgot-password
- *
- * Always answers 200 with the same body whether or not the email exists —
- * anything else turns this endpoint into an account enumeration oracle.
- *
- * The link goes out over Resend (same provider as the daily digest). In dev,
- * without RESEND_API_KEY, the link is returned in the response for local
- * testing instead.
- */
 export async function POST(request: Request) {
   const limited = await rateLimit(`forgot:${clientIp(request)}`, LIMITS.forgotPassword);
   if (!limited.ok) return tooManyRequests(limited.retryAfterSeconds, 'forgot-password');
@@ -31,9 +21,6 @@ export async function POST(request: Request) {
     const { email } = schema.parse(body);
     const generic = { ok: true, message: 'If that email has an account, a reset link is on its way.' };
 
-    // Checked before the user lookup so the response is identical whether or
-    // not the account exists — and honest, instead of claiming an email that
-    // can never be sent.
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey && process.env.NODE_ENV === 'production') {
       console.error('[forgot-password] RESEND_API_KEY is not configured');

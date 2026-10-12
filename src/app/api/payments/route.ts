@@ -7,9 +7,6 @@ import { computeDealMoney, round2, shiftDaysISO, todayISO } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 
-// Builds a Razorpay Payment Link and optionally logs the matching deal.
-// Payment Links are created in the merchant dashboard and take a pre-filled
-// amount via query params, so no server secret is needed here.
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
@@ -31,8 +28,6 @@ export async function POST(request: Request) {
 
     let deal = null;
     if (input.log_deal) {
-      // Same gate as POST /api/deals — without it the free plan's 3-deal
-      // limit is bypassed by generating payment links instead of deals.
       const plan = PLANS[effectivePlan(user) as PlanKey] ?? PLANS.free;
       const active = await countActiveDeals(user.id);
       if (active >= plan.max_active_deals) {
@@ -46,8 +41,6 @@ export async function POST(request: Request) {
           { status: 402 }
         );
       }
-      // A payment link IS an invoice: stamp the dates so reminders and ageing
-      // treat it like one instead of an undated, unchasable row.
       const today = todayISO();
       deal = await insertDeal(user.id, {
         brand: input.brand,

@@ -42,15 +42,11 @@ function fromDeal(d: Deal) {
   };
 }
 
-/** What this brand did on previous deals — the data that decides your advance %. */
 function brandHistory(deals: Deal[], brand: string) {
   const name = brand.trim().toLowerCase();
   if (!name) return null;
   const past = deals.filter((d) => d.brand.toLowerCase() === name);
   if (past.length === 0) return null;
-  // Keep each payment with its own date — filtering the days and the deals in
-  // two separate passes misaligns the indexes whenever an unpaid deal sits
-  // between paid ones, and the "recent" average reads the wrong rows.
   const paid = past
     .filter((d) => d.payment_status === 'paid' && d.invoice_sent_on && d.paid_on)
     .map((d) => ({
@@ -65,9 +61,6 @@ function brandHistory(deals: Deal[], brand: string) {
     return Date.parse(`${d.paid_on}T12:00:00`) > Date.parse(`${d.invoice_due_on}T12:00:00`);
   });
   if (paid.length === 0 && !wasOverdue) return null;
-  // Recent behaviour (last 6 months) predicts the next invoice; fall back to
-  // the lifetime average only when there is no recent payment. (??, not || —
-  // paying on day 0 is data, not absence.)
   const sixMonthsAgo = Date.now() - 180 * 86_400_000;
   const recent = paid.filter((p) => p.paidOn > sixMonthsAgo);
   const avgOf = (xs: { days: number }[]) =>
@@ -90,9 +83,6 @@ export default function DealForm({
   const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // The modal unmounts its body on close but this component stays mounted, so
-  // without a reset the next deal opened shows the previous deal's values —
-  // or a stale draft when logging a brand-new deal.
   useEffect(() => {
     if (open) {
       setF(deal ? fromDeal(deal) : BLANK);
@@ -116,7 +106,6 @@ export default function DealForm({
 
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
-  /* One source of truth for the split — the same function the API uses. */
   const money = useMemo(
     () =>
       computeDealMoney({

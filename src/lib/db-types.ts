@@ -48,7 +48,6 @@ export type Deal = {
   updated_at: string;
 };
 
-// Both drivers implement this; db.ts picks one from DATABASE_URL.
 export interface DbDriver {
   listUsers(): Promise<{ id: number; name: string; email: string }[]>;
   listDeals(creatorId: number): Promise<Deal[]>;
@@ -65,7 +64,6 @@ export interface DbDriver {
   updatePassword(userId: number, passwordHash: string): Promise<void>;
   bumpSessionVersion(userId: number): Promise<void>;
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
-  // A null expiry means "never lapses" — that is how the lifetime deal is stored.
   grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
   countLifetimeSales(): Promise<number>;
 
@@ -75,8 +73,6 @@ export interface DbDriver {
   markResetUsed(tokenHash: string, usedAt: number): Promise<void>;
 
   findPayment(provider: string, paymentId: string): Promise<PaymentRow | undefined>;
-  // amount is ALWAYS minor units (paise / cents) on every rail, so future
-  // revenue reports can sum the column without per-provider conversion.
   insertPayment(p: {
     provider: string;
     provider_payment_id: string;
@@ -88,7 +84,6 @@ export interface DbDriver {
   }): Promise<void>;
 }
 
-// Form input arrives as JS booleans; both stores keep the flag as 0/1.
 export function normalizeValue(v: unknown): unknown {
   if (typeof v === 'boolean') return v ? 1 : 0;
   return v;

@@ -2,12 +2,6 @@ import postgres from 'postgres';
 import type { DbDriver } from './db-types';
 import { normalizeValue } from './db-types';
 
-// Supabase/Postgres driver. Activated by DATABASE_URL — paste the Supabase
-// "transaction pooler" connection string and add ?sslmode=require.
-// prepare:false because Supavisor's transaction pooler does not support
-// server-side prepared statements.
-//
-// Schema lives in supabase/schema.sql; run it once in the Supabase SQL editor.
 
 let _sql: ReturnType<typeof postgres> | null = null;
 
@@ -21,8 +15,6 @@ function sql() {
   return _sql;
 }
 
-// Same text format SQLite's datetime('now') produces, so both drivers return
-// identical strings to the UI.
 const NOW = "to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')";
 
 const DEAL_COLS = [

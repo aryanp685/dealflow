@@ -25,15 +25,12 @@ export async function POST(request: Request) {
 
     const { token, password } = schema.parse(body);
 
-    // Single message for expired, already-used and forged tokens — leaking
-    // which case applied would let an attacker probe token validity.
     const userId = await consumePasswordReset(token);
     if (!userId) {
       return NextResponse.json({ error: 'That reset link is invalid or has expired. Request a new one.' }, { status: 400 });
     }
 
     await updatePassword(userId, await hashPassword(password));
-    // Kill every existing session — a stolen cookie must not survive the reset.
     await bumpSessionVersion(userId);
     return NextResponse.json({ ok: true, message: 'Password updated. You can sign in now.' });
   } catch (err) {

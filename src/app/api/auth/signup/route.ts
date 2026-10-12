@@ -28,9 +28,6 @@ export async function POST(request: Request) {
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
     }
-    // Two signups racing past the exists-check hit the UNIQUE constraint —
-    // answer the same 409 instead of a 500. (SQLite and Postgres both use the
-    // word "unique" in the violation message.)
     if (/unique/i.test(err instanceof Error ? err.message : String(err))) {
       return NextResponse.json({ error: 'An account with that email already exists. Sign in instead.' }, { status: 409 });
     }

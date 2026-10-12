@@ -270,7 +270,6 @@ export default function AppShell({
   );
 }
 
-/* ------------------------------------------------------------- header */
 
 function ShellHeader({
   userName,
@@ -319,7 +318,6 @@ function ShellHeader({
   );
 }
 
-/* ------------------------------------------------------------ pricing */
 
 type Billing = "yearly" | "quarterly" | "monthly";
 
@@ -431,8 +429,6 @@ function Pricing({
       return res.json();
     },
     onSuccess: (j) => {
-      // An unconfigured server answers a placeholder link — surface the
-      // warning instead of redirecting the buyer to a dead URL.
       if (j.configured && j.url) window.location.href = j.url;
       else notify(j.warning ?? "Payments are not configured yet", "err");
     },

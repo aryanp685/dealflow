@@ -13,9 +13,6 @@ export async function POST(request: Request) {
 
     const { email, password } = loginSchema.parse(body);
 
-    // Two buckets: a strict per-account one (8 tries per email per IP, so a
-    // shared office NAT never gets locked out by someone else's typos) in
-    // front of a generous per-IP one (stops password spraying across accounts).
     const ip = clientIp(request);
     const perAccount = await rateLimit(`login:${ip}:${email}`, LIMITS.login);
     if (!perAccount.ok) return tooManyRequests(perAccount.retryAfterSeconds, 'login');
@@ -24,8 +21,6 @@ export async function POST(request: Request) {
 
     const user = await findUserByEmail(email);
 
-    /* Same message for unknown email and wrong password — never leak which
-       accounts exist. */
     if (!user || !(await verifyPassword(password, user.password_hash))) {
       return NextResponse.json({ error: 'Email or password is incorrect' }, { status: 401 });
     }

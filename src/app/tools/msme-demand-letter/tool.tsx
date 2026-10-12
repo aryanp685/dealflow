@@ -57,7 +57,7 @@ export default function MsmeDemandLetterTool() {
       await navigator.clipboard.writeText(letter);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard unavailable — the text is on screen to copy manually */ }
+    } catch { }
   };
 
   const ready = f.your_name && f.debtor && principal > 0 && f.due_on;

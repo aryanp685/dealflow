@@ -255,7 +255,6 @@ function Stat({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
   );
 }
 
-/** Pure-CSS bar chart — no charting library, no extra bundle weight. */
 function MonthlyChart({ monthly, peak }: { monthly: Array<{ month: string; gross: number; collected: number }>; peak: number }) {
   return (
     <m.div className="card" variants={listItem}>
@@ -319,9 +318,6 @@ function CollectPayment({
         body: JSON.stringify({
           brand: selected.brand,
           title: selected.title,
-          // The invoice total, not the net: TDS is the payer's statutory
-          // deduction with its own Form 16A trail. Charging the net would
-          // under-collect against the invoice and skip that trail.
           amount: computeDealMoney(selected).invoice_total,
           currency: selected.currency,
           note: `${selected.title} — ${selected.invoice_number || 'brand deal'}`,
