@@ -42,7 +42,6 @@ button, input, select, textarea {
   color: inherit;
 }
 
-/* ------------------------------------------------------------ shell */
 
 .shell { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
 
@@ -54,7 +53,6 @@ button, input, select, textarea {
 .brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
 .brand-sub { font-size: 12px; color: var(--muted); margin-top: -2px; }
 
-/* ------------------------------------------------------------ tabs */
 
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
 .tab {
@@ -69,7 +67,6 @@ button, input, select, textarea {
   background: var(--red); color: #fff; font-size: 11px; font-weight: 700;
 }
 
-/* ------------------------------------------------------------ kpis */
 
 .kpi-grid {
   display: grid; gap: 12px; margin-bottom: 22px;
@@ -86,7 +83,6 @@ button, input, select, textarea {
 .kpi.warn .kpi-value { color: var(--amber); }
 .kpi.bad  .kpi-value { color: var(--red); }
 
-/* ------------------------------------------------------------ cards */
 
 .card {
   background: var(--card); border: 1px solid var(--border-soft);
@@ -98,7 +94,6 @@ button, input, select, textarea {
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row > * { flex: 1; min-width: 200px; }
 
-/* ------------------------------------------------------------ table */
 
 .table-wrap { overflow-x: auto; border-radius: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -115,7 +110,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .t-money { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
 .t-right { text-align: right; }
 
-/* ------------------------------------------------------------ pills */
 
 .pill {
   display: inline-block; padding: 3px 9px; border-radius: 999px;
@@ -128,7 +122,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .p-red   { background: var(--red-soft);   color: #ff9dab; }
 .p-purple{ background: var(--accent-soft); color: #c6b6ff; }
 
-/* ------------------------------------------------------------ buttons */
 
 .btn {
   padding: 8px 15px; border-radius: 9px; border: 1px solid var(--border);
@@ -149,7 +142,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 
 .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
-/* ------------------------------------------------------------ forms */
 
 .field { display: block; margin-bottom: 13px; }
 .field label {
@@ -184,7 +176,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .money-preview .line.total { border-top: 1px solid var(--border); margin-top: 7px; padding-top: 9px; font-weight: 700; }
 .money-preview .line.net span:last-child { color: var(--green); }
 
-/* ------------------------------------------------------------ reminders */
 
 .reminder {
   border: 1px solid var(--border-soft); border-radius: 11px; padding: 14px 16px;
@@ -203,7 +194,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   border: 1px solid var(--border-soft);
 }
 
-/* ------------------------------------------------------------ misc */
 
 .empty { text-align: center; padding: 52px 20px; color: var(--muted); }
 .empty h3 { color: var(--text); font-size: 17px; margin: 0 0 7px; }
@@ -253,9 +243,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   .bar-value { width: 80px; }
 }
 
-/* ==========================================================================
-   v2 — animations, landing page, auth, polish
-   ========================================================================== */
 
 :root {
   --grad: linear-gradient(135deg, #7c5cff 0%, #46b1ff 100%);
@@ -272,7 +259,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   }
 }
 
-/* ------------------------------------------------------------- buttons */
 .btn { position: relative; overflow: hidden; }
 .btn::after {
   content: ''; position: absolute; inset: 0;
@@ -293,7 +279,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .linklike { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font: inherit; }
 .linklike:hover { text-decoration: underline; }
 
-/* --------------------------------------------------------------- shell */
 .topbar-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .tabs { position: relative; align-items: center; }
 .tabs-right { margin-left: auto; display: flex; gap: 8px; }
@@ -316,11 +301,9 @@ tr.deal-row:hover { background: var(--card-hover); }
 
 .plan-notice { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
 
-/* ----------------------------------------------------------------- kpi */
 .kpi { transition: border-color .2s ease, transform .2s var(--ease); }
 .kpi:hover { border-color: #39414d; transform: translateY(-2px); }
 
-/* ----------------------------------------------------------- skeleton */
 .skeleton {
   border-radius: 7px;
   background: linear-gradient(90deg, var(--bg-soft) 25%, #1e242c 50%, var(--bg-soft) 75%);
@@ -329,7 +312,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
-/* --------------------------------------------------------------- card */
 .card { transition: border-color .2s ease; }
 .card-alert { border-color: rgba(255,92,114,.28); }
 .card-title.red { color: var(--red); }
@@ -344,7 +326,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .stat-line.strong span:first-child { color: var(--text); }
 .stat-divider { border-top: 1px solid var(--border-soft); margin: 9px 0; padding-top: 9px; }
 
-/* -------------------------------------------------------------- chart */
 .chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 18px 0 10px; }
 .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 28px; }
 .chart-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
@@ -357,7 +338,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .chart-legend .dot.gross { background: var(--accent); }
 .chart-legend .dot.collected { background: var(--green); }
 
-/* ------------------------------------------------------------ reminders */
 .reminder { transition: border-color .2s ease; }
 .reminder:hover { border-color: #39414d; }
 .reminder-body {
@@ -368,7 +348,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 }
 .reminder .dim { color: var(--muted-dim); }
 
-/* --------------------------------------------------------------- form */
 .field input[aria-invalid='true'] { border-color: var(--red); }
 .hint.err { color: var(--red); }
 .form-tip {
@@ -378,14 +357,11 @@ tr.deal-row:hover { background: var(--card-hover); }
 }
 .modal-wide { max-width: 860px; }
 
-/* -------------------------------------------------------------- empty */
 .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .9; }
 .empty-actions { display: flex; gap: 9px; justify-content: center; flex-wrap: wrap; }
 
-/* -------------------------------------------------------------- toast */
 .toast.info { border-color: var(--blue); color: var(--blue); }
 
-/* -------------------------------------------------------------- error */
 .error-screen { min-height: 100vh; display: grid; place-items: center; padding: 30px 18px; }
 .error-card {
   max-width: 480px; text-align: center; background: var(--card);
@@ -400,7 +376,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   font-family: ui-monospace, monospace;
 }
 
-/* --------------------------------------------------------------- auth */
 .auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 30px 18px; }
 .auth-card {
   width: 100%; max-width: 420px; background: var(--card);
@@ -412,7 +387,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .auth-sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
 .auth-switch { text-align: center; margin-top: 20px; font-size: 14px; color: var(--muted); }
 
-/* ============================================================ LANDING */
 .landing { min-height: 100vh; background: var(--bg); overflow-x: hidden; }
 .landing::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -594,7 +568,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   .land-section { padding: 44px 18px; }
   .chart { height: 120px; }
 
-  /* Mobile table improvements */
   .table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -615,7 +588,6 @@ tr.deal-row:hover { background: var(--card-hover); }
     margin-bottom: 4px;
   }
 
-  /* Mobile modal improvements */
   .modal-bg {
     padding: 16px;
     align-items: flex-end;
@@ -639,7 +611,6 @@ tr.deal-row:hover { background: var(--card-hover); }
     width: 100%;
   }
 
-  /* Mobile form improvements */
   .form-grid {
     grid-template-columns: 1fr;
     gap: 0;
@@ -652,10 +623,9 @@ tr.deal-row:hover { background: var(--card-hover); }
   }
   .field input, .field select, .field textarea {
     padding: 12px 10px;
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
   }
 
-  /* Mobile dashboard improvements */
   .kpi-grid {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -680,16 +650,14 @@ tr.deal-row:hover { background: var(--card-hover); }
     min-width: 100%;
   }
 
-  /* Mobile specific touch improvements */
   .table-wrap {
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none;
   }
   .table-wrap::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none;
   }
 
-  /* Mobile action buttons */
   .actions {
     gap: 6px;
   }
@@ -698,7 +666,6 @@ tr.deal-row:hover { background: var(--card-hover); }
     font-size: 13px;
   }
 
-  /* Mobile pricing cards */
   .pricing-grid {
     grid-template-columns: 1fr;
   }
@@ -706,7 +673,6 @@ tr.deal-row:hover { background: var(--card-hover); }
     max-width: 100%;
   }
 
-  /* Mobile tabs */
   .tabs {
     gap: 4px;
   }
@@ -716,7 +682,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   }
 }
 
-/* ------------------------------------------------------------ product tour */
 
 .tour-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
 @media (min-width: 900px) { .tour-grid { grid-template-columns: 1fr 1fr 1fr; gap: 20px; } }
@@ -725,7 +690,6 @@ tr.deal-row:hover { background: var(--card-hover); }
 .tour-card figcaption { padding: 12px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
 .tour-card figcaption strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 14px; }
 
-/* ------------------------------------------------------- free tools pages */
 
 .tool-main { max-width: 860px; margin: 0 auto; padding: 90px 20px 40px; }
 .tool-head h1 { font-size: clamp(24px, 4vw, 34px); line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.02em; }
@@ -774,7 +738,6 @@ tr.deal-row:hover { background: var(--card-hover); }
   .field label, .card-sub, .tool-head p { color: #333 !important; }
 }
 
-/* ------------------------------------------------------------ lightbox */
 
 .tour-zoom {
   display: block; width: 100%; padding: 0; border: 0; background: none;

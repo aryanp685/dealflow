@@ -4,13 +4,13 @@ import fs from 'node:fs';
 import type { DbDriver } from './db-types';
 import { normalizeValue } from './db-types';
 
-// Local/dev driver. Zero setup: a file at ./data/dealflow.db, migrated on
-// first open. Production runs the Postgres driver (see db-postgres.ts) as soon
-// as DATABASE_URL is set.
 
 let _db: Database.Database | null = null;
 
 export function handle(): Database.Database {
+  if (process.env.VERCEL) {
+    throw new Error('DATABASE_URL must be set when running on Vercel — SQLite does not persist on serverless.');
+  }
   if (_db) return _db;
   const dataDir = path.join(process.cwd(), 'data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
@@ -24,7 +24,7 @@ export function handle(): Database.Database {
 
 export function resetDbHandle() {
   if (_db) {
-    try { _db.close(); } catch { /* already closed */ }
+    try { _db.close(); } catch { }
     _db = null;
   }
 }
@@ -35,8 +35,9 @@ function migrate(database: Database.Database) {
     "ALTER TABLE payments ADD COLUMN provider TEXT NOT NULL DEFAULT 'razorpay'",
     'ALTER TABLE deals ADD COLUMN payment_terms_days INTEGER NOT NULL DEFAULT 15',
     'ALTER TABLE deals ADD COLUMN escalation_contact TEXT',
+    'ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1',
   ]) {
-    try { database.exec(stmt); } catch { /* fresh DB or already migrated */ }
+    try { database.exec(stmt); } catch { }
   }
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -47,6 +48,7 @@ function migrate(database: Database.Database) {
       plan          TEXT    NOT NULL DEFAULT 'free'
                     CHECK (plan IN ('free','creator','pro')),
       plan_expires_at INTEGER,
+      session_version INTEGER NOT NULL DEFAULT 1,
       created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -198,13 +200,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     return handle()
-      .prepare('SELECT id, name, email, password_hash, plan, plan_expires_at, created_at FROM users WHERE email = ?')
+      .prepare('SELECT id, name, email, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ?')
       .get(email.toLowerCase()) as never;
   },
 
   async findUserById(id) {
     return handle()
-      .prepare('SELECT id, name, email, plan, plan_expires_at, created_at FROM users WHERE id = ?')
+      .prepare('SELECT id, name, email, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ?')
       .get(id) as never;
   },
 
@@ -217,6 +219,17 @@ export const driver: DbDriver = {
 
   async updatePassword(userId, passwordHash) {
     handle().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+  },
+
+  async bumpSessionVersion(userId) {
+    handle().prepare('UPDATE users SET session_version = session_version + 1 WHERE id = ?').run(userId);
+  },
+
+  async countLifetimeSales() {
+    const row = handle()
+      .prepare(`SELECT COUNT(*) AS c FROM payments WHERE billing = 'lifetime'`)
+      .get() as { c: number };
+    return row.c;
   },
 
   async getPlanInfo(userId) {

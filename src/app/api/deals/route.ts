@@ -46,8 +46,6 @@ export async function POST(request: Request) {
 
     const parsed = createDealSchema.parse(body);
 
-    /* Plan gating. Enforced here, not in the UI — a client-side check alone
-       would let anyone POST straight to the API. */
     const plan = PLANS[effectivePlan(user) as PlanKey] ?? PLANS.free;
     const active = await countActiveDeals(user.id);
     const willBeActive = parsed.status !== 'paid' && parsed.status !== 'cancelled' && parsed.payment_status !== 'paid';

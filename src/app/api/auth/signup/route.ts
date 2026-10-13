@@ -21,12 +21,15 @@ export async function POST(request: Request) {
     }
 
     const user = await createUser({ name, email, passwordHash: await hashPassword(password) });
-    await setSessionCookie(await createSessionToken(user.id));
+    await setSessionCookie(await createSessionToken(user.id, user.session_version ?? 1));
 
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, plan: user.plan } }, { status: 201 });
   } catch (err) {
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
+    }
+    if (/unique/i.test(err instanceof Error ? err.message : String(err))) {
+      return NextResponse.json({ error: 'An account with that email already exists. Sign in instead.' }, { status: 409 });
     }
     console.error('[signup]', err);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });

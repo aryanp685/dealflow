@@ -13,8 +13,6 @@ export default function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // The token arrives in the query string from the emailed link. Read it once
-  // on mount rather than during render so it survives the static prerender.
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('token');
     if (t) setToken(t);

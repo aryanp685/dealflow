@@ -1,19 +1,7 @@
 import type { Deal } from './db';
-import { computeDealMoney, daysUntil, overdueDays, formatDate, formatMoney, shiftDaysISO, todayISO } from './money';
+import { computeDealMoney, daysUntil, overdueDays, formatDate, formatMoney, shiftDaysISO, todayISO, tdsSectionFor } from './money';
 import { msmeInterest, SAMADHAAN_URL, UDYAM_URL } from './msme';
 
-/**
- * Follow-up message generator.
- *
- * This is the feature creators actually pay for: knowing *what to say* and
- * *when to say it* when a brand sits on an invoice. Every template is written
- * to be copy-pasted straight into WhatsApp or email — no placeholders left
- * unfilled, no cringe "I hope this email finds you well".
- *
- * Tone ladder: polite -> firm -> formal demand notice. Past 45 days the
- * letter invokes Section 15 of the MSMED Act (3× RBI bank rate compound
- * interest) — the one lever Indian freelancers have that brands fear.
- */
 
 export type ReminderKind =
   | 'delivery_upcoming'
@@ -34,9 +22,7 @@ export type Reminder = {
   headline: string;
   channel: 'whatsapp' | 'email';
   message: string;
-  /** The exact text to send to the brand — what the WhatsApp button opens with. */
   send_text: string;
-  /** E.164-ish digits from the deal's WhatsApp field, when usable. */
   wa_number?: string;
   money?: string;
   date?: string;
@@ -54,17 +40,12 @@ const KIND_LABEL: Record<ReminderKind, string> = {
   advance_not_received: 'Advance not received',
 };
 
-/** Keeps digits only; a bare 10-digit Indian number gets its country code. */
 function waNumber(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
-  // Remove all non-digit characters
   let digits = raw.replace(/\D/g, '');
-  // Remove leading zeros
   digits = digits.replace(/^0+/, '');
   if (!digits) return undefined;
-  // Handle Indian numbers: if 10 digits, add +91 country code
   if (digits.length === 10) digits = `91${digits}`;
-  // Validate length: typical international numbers are 10-15 digits
   if (digits.length < 10 || digits.length > 15) return undefined;
   return digits;
 }
@@ -72,8 +53,6 @@ function waNumber(raw: string | null | undefined): string | undefined {
 export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
   const out: Reminder[] = [];
 
-  // Per-brand payment history, so a chase can quote what this brand actually
-  // did before — the number that decides how hard to push.
   const history = new Map<string, { paid: number[]; late: number }>();
   for (const d of deals) {
     const key = d.brand.trim().toLowerCase();
@@ -92,8 +71,6 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
 
     const m = computeDealMoney(deal);
     const value = formatMoney(m.net_receivable, deal.currency);
-    // What the brand owes is the invoice total; TDS is theirs to deduct and
-    // deposit, so chasing the net figure quotes a number no invoice shows.
     const invoiceValue = formatMoney(m.invoice_total, deal.currency);
     const tdsNote = deal.tds_pct > 0
       ? ` They deduct ${deal.tds_pct}% TDS and deposit it against your PAN — ${value} is what reaches your account.`
@@ -106,8 +83,8 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       : '';
     const contact = deal.brand_contact || deal.brand;
     const wa = waNumber(deal.brand_whatsapp);
+    const tdsSection = tdsSectionFor(deal.tds_pct);
 
-    /* ---- 1. Deliverable deadline ---- */
     if (
       deal.deliver_by &&
       !deal.delivered_on &&
@@ -161,7 +138,6 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       }
     }
 
-    /* ---- 2. Delivered but invoice never sent ---- */
     if (
       (deal.status === 'delivered' || (deal.delivered_on && deal.payment_status === 'not_invoiced')) &&
       deal.payment_status === 'not_invoiced'
@@ -174,7 +150,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
         ``,
         `Please find the invoice attached for ${invoiceValue}${deal.gst_applicable ? ' (incl. 18% GST)' : ''}.`,
         `${termsLine}`
-          + (deal.tds_pct > 0 ? `\nKindly deduct TDS at ${deal.tds_pct}% u/s ${deal.tds_pct >= 10 ? '194J' : '194H'} and share Form 16A at your convenience.` : '')
+          + (deal.tds_pct > 0 ? `\nKindly deduct TDS at ${deal.tds_pct}%${tdsSection ? ` u/s ${tdsSection}` : ''} and share Form 16A at your convenience.` : '')
           + ``,
         `Bank details are on the invoice. Let me know if you need anything else from my side.`,
         ``,
@@ -204,7 +180,6 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       });
     }
 
-    /* ---- 3. Advance agreed but not received ---- */
     if (
       deal.advance_pct > 0 &&
       deal.payment_status === 'not_invoiced' &&
@@ -235,7 +210,6 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       }
     }
 
-    /* ---- 4. Invoice sent — chase the payment ---- */
     if (['invoiced', 'overdue'].includes(deal.payment_status) && deal.invoice_due_on) {
       const days = overdueDays(deal.invoice_due_on, deal.payment_status, today);
       const dueIn = daysUntil(deal.invoice_due_on, today);
@@ -400,7 +374,6 @@ export function reminderLabel(kind: ReminderKind): string {
   return KIND_LABEL[kind];
 }
 
-/** Plain-text export of every reminder — used by the "Reminders" API. */
 export function reminderDigest(reminders: Reminder[]): string {
   if (reminders.length === 0) return 'Nothing needs your attention today. 🎉';
   const groups = new Map<number, Reminder[]>();

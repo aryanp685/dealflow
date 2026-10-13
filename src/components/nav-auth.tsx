@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-// The landing stays a static Server Component; only this nav fragment checks
-// the session in the browser so a signed-in visitor gets a direct link.
 export default function NavAuth() {
   const [authed, setAuthed] = useState(false);
 

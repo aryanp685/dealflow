@@ -1,11 +1,6 @@
 import Link from 'next/link';
 import Logo from './logo';
 
-/**
- * Shared frame for the free public tools: brand header, the tool itself,
- * an FAQ block for search, and a CTA into the app. Server-rendered so the
- * whole page — tool copy included — is indexable without JS.
- */
 export default function ToolShell({
   title,
   intro,

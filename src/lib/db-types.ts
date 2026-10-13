@@ -6,6 +6,7 @@ export type User = {
   email: string;
   plan: string;
   plan_expires_at: number | null;
+  session_version: number;
   created_at: string;
 };
 
@@ -47,7 +48,6 @@ export type Deal = {
   updated_at: string;
 };
 
-// Both drivers implement this; db.ts picks one from DATABASE_URL.
 export interface DbDriver {
   listUsers(): Promise<{ id: number; name: string; email: string }[]>;
   listDeals(creatorId: number): Promise<Deal[]>;
@@ -62,8 +62,10 @@ export interface DbDriver {
   findUserById(id: number): Promise<User | undefined>;
   createUser(input: { name: string; email: string; passwordHash: string }): Promise<User>;
   updatePassword(userId: number, passwordHash: string): Promise<void>;
+  bumpSessionVersion(userId: number): Promise<void>;
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
-  grantPlan(userId: number, plan: string, planExpiresAt: number): Promise<void>;
+  grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
+  countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;
   insertReset(tokenHash: string, userId: number, expiresAt: number): Promise<void>;
@@ -82,7 +84,6 @@ export interface DbDriver {
   }): Promise<void>;
 }
 
-// Form input arrives as JS booleans; both stores keep the flag as 0/1.
 export function normalizeValue(v: unknown): unknown {
   if (typeof v === 'boolean') return v ? 1 : 0;
   return v;

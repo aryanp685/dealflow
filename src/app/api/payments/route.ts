@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { insertDeal } from '@/lib/db';
-import { paymentLinkSchema } from '@/lib/schemas';
-import { computeDealMoney, round2 } from '@/lib/money';
+import { UnauthorizedError, requireUser, effectivePlan } from '@/lib/auth';
+import { countActiveDeals, insertDeal } from '@/lib/db';
+import { paymentLinkSchema, PLANS, type PlanKey } from '@/lib/schemas';
+import { computeDealMoney, round2, shiftDaysISO, todayISO } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 
-// Builds a Razorpay Payment Link and optionally logs the matching deal.
-// Payment Links are created in the merchant dashboard and take a pre-filled
-// amount via query params, so no server secret is needed here.
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
@@ -31,6 +28,20 @@ export async function POST(request: Request) {
 
     let deal = null;
     if (input.log_deal) {
+      const plan = PLANS[effectivePlan(user) as PlanKey] ?? PLANS.free;
+      const active = await countActiveDeals(user.id);
+      if (active >= plan.max_active_deals) {
+        return NextResponse.json(
+          {
+            error: `The ${plan.label} plan covers ${plan.max_active_deals} active deals. Upgrade to keep tracking more.`,
+            code: 'plan_limit',
+            limit: plan.max_active_deals,
+            active,
+          },
+          { status: 402 }
+        );
+      }
+      const today = todayISO();
       deal = await insertDeal(user.id, {
         brand: input.brand,
         title: input.title ?? 'Brand deal',
@@ -42,7 +53,9 @@ export async function POST(request: Request) {
         gst_applicable: 0,
         tds_pct: 0,
         advance_pct: 0,
-        agreed_on: new Date().toISOString().slice(0, 10),
+        agreed_on: today,
+        invoice_sent_on: today,
+        invoice_due_on: shiftDaysISO(today, 15),
       });
     }
 

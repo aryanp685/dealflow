@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { z } from 'zod';
-import { consumePasswordReset, hashPassword, updatePassword } from '@/lib/auth';
+import { bumpSessionVersion, consumePasswordReset, hashPassword, updatePassword } from '@/lib/auth';
 import { LIMITS, clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -25,14 +25,13 @@ export async function POST(request: Request) {
 
     const { token, password } = schema.parse(body);
 
-    // Single message for expired, already-used and forged tokens — leaking
-    // which case applied would let an attacker probe token validity.
     const userId = await consumePasswordReset(token);
     if (!userId) {
       return NextResponse.json({ error: 'That reset link is invalid or has expired. Request a new one.' }, { status: 400 });
     }
 
     await updatePassword(userId, await hashPassword(password));
+    await bumpSessionVersion(userId);
     return NextResponse.json({ ok: true, message: 'Password updated. You can sign in now.' });
   } catch (err) {
     if (err instanceof ZodError) {

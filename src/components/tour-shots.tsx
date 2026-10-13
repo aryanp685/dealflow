@@ -11,10 +11,6 @@ export type Shot = {
   alt: string;
 };
 
-/**
- * Product screenshots with a click-to-zoom lightbox: Esc or backdrop closes,
- * arrow keys (and the on-screen buttons) move between shots.
- */
 export default function TourShots({ shots }: { shots: Shot[] }) {
   const [open, setOpen] = useState<number | null>(null);
 
@@ -51,7 +47,6 @@ export default function TourShots({ shots }: { shots: Shot[] }) {
               onClick={() => setOpen(i)}
               aria-label={`Enlarge the ${s.title} screenshot`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={s.src} alt={s.alt} />
               <span className="tour-zoom-hint">🔍 Click to enlarge</span>
             </button>
@@ -81,7 +76,6 @@ export default function TourShots({ shots }: { shots: Shot[] }) {
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="lightbox-img" src={shots[open].src} alt={shots[open].alt} />
               <div className="lightbox-bar">
                 <div className="lightbox-cap">

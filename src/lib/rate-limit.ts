@@ -1,18 +1,11 @@
 import { Redis } from '@upstash/redis';
 
-// Sliding-window rate limiter for the endpoints an attacker scripts:
-// credential stuffing on /login, enumeration on /signup, token guessing on
-// /forgot-password and /reset-password.
-//
-// With UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN set (Vercel
-// serverless), hits are counted in a shared Redis sorted set, so the limit
-// holds across every instance. Without them (local dev, single-server
-// hosts) an in-memory window is used instead.
 
 export type LimitSpec = { limit: number; windowMs: number };
 
 export const LIMITS = {
   login: { limit: 8, windowMs: 10 * 60_000 },
+  loginIp: { limit: 30, windowMs: 10 * 60_000 },
   signup: { limit: 5, windowMs: 60 * 60_000 },
   forgotPassword: { limit: 3, windowMs: 60 * 60_000 },
   resetPassword: { limit: 5, windowMs: 60 * 60_000 },
@@ -61,7 +54,6 @@ async function redisWindow(r: Redis, key: string, spec: LimitSpec): Promise<Rate
   return { ok: false, remaining: 0, retryAfterSeconds };
 }
 
-/* ------------------------------------------------------- in-memory store */
 
 const hits = new Map<string, number[]>();
 let sweeper: ReturnType<typeof setInterval> | null = null;
@@ -95,21 +87,17 @@ function memoryWindow(key: string, spec: LimitSpec): RateLimitResult {
   return { ok: true, remaining: spec.limit - times.length, retryAfterSeconds: 0 };
 }
 
-// Test-only.
 export function resetRateLimits() {
   hits.clear();
 }
 
-/* ------------------------------------------------------------- helpers */
 
-// Client IP behind a proxy.
 export function clientIp(request: Request): string {
   const fwd = request.headers.get('x-forwarded-for');
   if (fwd) return fwd.split(',')[0].trim();
   return request.headers.get('x-real-ip') ?? 'unknown';
 }
 
-// 429 with Retry-After so clients back off instead of hammering.
 export function tooManyRequests(retryAfterSeconds: number, scope: string) {
   const minutes = Math.round(retryAfterSeconds / 60);
   const wait = retryAfterSeconds >= 60 ? `${minutes} minute(s)` : `${retryAfterSeconds} second(s)`;

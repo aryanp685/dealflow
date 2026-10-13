@@ -11,7 +11,5 @@
     "declaration": false,
     "types": ["node"]
   },
-  // Only the pure, Next-free modules. auth.ts imports next/headers and is
-  // exercised through the app build + API tests instead.
   "files": ["src/lib/money.ts", "src/lib/msme.ts", "src/lib/schemas.ts", "src/lib/db-types.ts", "src/lib/db.ts", "src/lib/db-sqlite.ts", "src/lib/db-postgres.ts", "src/lib/reminders.ts", "src/lib/rate-limit.ts"]
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Modal, Pill } from './ui';
 import { computeDealMoney, formatMoney, shiftDaysISO, TDS_SECTIONS } from '@/lib/money';
@@ -42,32 +42,30 @@ function fromDeal(d: Deal) {
   };
 }
 
-/** What this brand did on previous deals — the data that decides your advance %. */
 function brandHistory(deals: Deal[], brand: string) {
   const name = brand.trim().toLowerCase();
   if (!name) return null;
   const past = deals.filter((d) => d.brand.toLowerCase() === name);
   if (past.length === 0) return null;
-  const paidDays = past
+  const paid = past
     .filter((d) => d.payment_status === 'paid' && d.invoice_sent_on && d.paid_on)
-    .map((d) => Math.round((Date.parse(`${d.paid_on}T12:00:00`) - Date.parse(`${d.invoice_sent_on}T12:00:00`)) / 86_400_000))
-    .filter((n) => n >= 0);
+    .map((d) => ({
+      days: Math.round(
+        (Date.parse(`${d.paid_on}T12:00:00`) - Date.parse(`${d.invoice_sent_on}T12:00:00`)) / 86_400_000
+      ),
+      paidOn: Date.parse(`${d.paid_on}T12:00:00`),
+    }))
+    .filter((p) => p.days >= 0 && !Number.isNaN(p.paidOn));
   const wasOverdue = past.some((d) => {
     if (d.payment_status !== 'paid' || !d.invoice_due_on || !d.paid_on) return false;
     return Date.parse(`${d.paid_on}T12:00:00`) > Date.parse(`${d.invoice_due_on}T12:00:00`);
   });
-  if (paidDays.length === 0 && !wasOverdue) return null;
-  // Weighted average: recent payments (last 6 months) count more
-  const sixMonthsAgo = Date.now() - (180 * 86_400_000);
-  const recentPaidDays = paidDays.filter((_, i) => {
-    const deal = past[i];
-    return deal.paid_on && Date.parse(`${deal.paid_on}T12:00:00`) > sixMonthsAgo;
-  });
-  const avg = paidDays.length ? Math.round(paidDays.reduce((a, b) => a + b, 0) / paidDays.length) : null;
-  const recentAvg = recentPaidDays.length ? Math.round(recentPaidDays.reduce((a, b) => a + b, 0) / recentPaidDays.length) : null;
-  // Use recent average if available, otherwise use overall average
-  const finalAvg = recentAvg || avg;
-  return { deals: past.length, avg: finalAvg, wasOverdue };
+  if (paid.length === 0 && !wasOverdue) return null;
+  const sixMonthsAgo = Date.now() - 180 * 86_400_000;
+  const recent = paid.filter((p) => p.paidOn > sixMonthsAgo);
+  const avgOf = (xs: { days: number }[]) =>
+    xs.length ? Math.round(xs.reduce((a, b) => a + b.days, 0) / xs.length) : null;
+  return { deals: past.length, avg: avgOf(recent) ?? avgOf(paid), wasOverdue };
 }
 
 export default function DealForm({
@@ -84,6 +82,14 @@ export default function DealForm({
   const [f, setF] = useState(() => (deal ? fromDeal(deal) : BLANK));
   const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (open) {
+      setF(deal ? fromDeal(deal) : BLANK);
+      setTouched(false);
+      setFieldErrors({});
+    }
+  }, [open, deal]);
   const dealsQuery = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
@@ -100,7 +106,6 @@ export default function DealForm({
 
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
-  /* One source of truth for the split — the same function the API uses. */
   const money = useMemo(
     () =>
       computeDealMoney({

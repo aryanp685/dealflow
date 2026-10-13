@@ -2,12 +2,6 @@ import postgres from 'postgres';
 import type { DbDriver } from './db-types';
 import { normalizeValue } from './db-types';
 
-// Supabase/Postgres driver. Activated by DATABASE_URL — paste the Supabase
-// "transaction pooler" connection string and add ?sslmode=require.
-// prepare:false because Supavisor's transaction pooler does not support
-// server-side prepared statements.
-//
-// Schema lives in supabase/schema.sql; run it once in the Supabase SQL editor.
 
 let _sql: ReturnType<typeof postgres> | null = null;
 
@@ -21,8 +15,6 @@ function sql() {
   return _sql;
 }
 
-// Same text format SQLite's datetime('now') produces, so both drivers return
-// identical strings to the UI.
 const NOW = "to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')";
 
 const DEAL_COLS = [
@@ -92,13 +84,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     const rows =
-      await sql()`SELECT id, name, email, password_hash, plan, plan_expires_at, created_at FROM users WHERE email = ${email.toLowerCase()}`;
+      await sql()`SELECT id, name, email, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ${email.toLowerCase()}`;
     return rows[0] as never;
   },
 
   async findUserById(id) {
     const rows =
-      await sql()`SELECT id, name, email, plan, plan_expires_at, created_at FROM users WHERE id = ${id}`;
+      await sql()`SELECT id, name, email, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ${id}`;
     return rows[0] as never;
   },
 
@@ -106,12 +98,21 @@ export const driver: DbDriver = {
     const rows =
       await sql()`INSERT INTO users (name, email, password_hash, plan)
                   VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.passwordHash}, 'free')
-                  RETURNING id, name, email, plan, plan_expires_at, created_at`;
+                  RETURNING id, name, email, plan, plan_expires_at, session_version, created_at`;
     return rows[0] as never;
   },
 
   async updatePassword(userId, passwordHash) {
     await sql()`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${userId}`;
+  },
+
+  async bumpSessionVersion(userId) {
+    await sql()`UPDATE users SET session_version = session_version + 1 WHERE id = ${userId}`;
+  },
+
+  async countLifetimeSales() {
+    const rows = await sql()`SELECT COUNT(*)::int AS c FROM payments WHERE billing = 'lifetime'`;
+    return rows[0].c as number;
   },
 
   async getPlanInfo(userId) {

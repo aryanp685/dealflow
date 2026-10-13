@@ -1,7 +1,3 @@
--- DealFlow schema for Supabase.
--- Run once: Supabase Dashboard > SQL Editor > paste > Run.
--- Then copy the "Transaction pooler" connection string (Settings > Database)
--- into DATABASE_URL and append ?sslmode=require.
 
 create table if not exists users (
   id              integer generated always as identity primary key,
@@ -11,9 +7,11 @@ create table if not exists users (
   plan            text    not null default 'free'
                   check (plan in ('free','creator','pro')),
   plan_expires_at double precision,
+  session_version integer not null default 1,
   created_at      text    not null
                   default to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
+
 
 create table if not exists payments (
   id                  integer generated always as identity primary key,
@@ -88,10 +86,6 @@ create index if not exists idx_deals_status  on deals (status);
 create index if not exists idx_deals_paystat on deals (payment_status);
 create index if not exists idx_deals_due     on deals (invoice_due_on);
 
--- Row-level security: the app connects as the postgres role (which bypasses
--- RLS) and enforces creator scoping in every query. Enabling RLS with no
--- anon/service policies means the PostgREST API (anon key) can read nothing,
--- so the database is not exposed through Supabase's REST layer.
 alter table users          enable row level security;
 alter table payments       enable row level security;
 alter table deals          enable row level security;

@@ -27,11 +27,6 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * Marketing landing page — a Server Component, so it ships no client JS for
- * the above-the-fold content and is fully indexable. Animated flourishes live
- * in <LandingMotion/>, which is the only client boundary on the page.
- */
 export default function LandingPage() {
   return (
     <div className="landing">
@@ -52,7 +47,6 @@ export default function LandingPage() {
           </div>
           <MobileNav />
         </header>
-        {/* ---------------------------------------------------- hero */}
         <section className="hero">
           <Reveal y={14}>
             <div className="hero-badge">
@@ -85,7 +79,6 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        {/* ------------------------------------------------- problem */}
         <section id="problem" className="land-section">
           <div className="section-head">
             <h2>The money you&apos;re not collecting</h2>
@@ -121,7 +114,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ------------------------------------------------ features */}
         <section id="features" className="land-section">
           <div className="section-head">
             <h2>The whole deal lifecycle — not just the invoice</h2>
@@ -148,7 +140,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ------------------------------------------------ workflow */}
         <section className="land-section">
           <div className="section-head">
             <h2>How it works</h2>
@@ -171,7 +162,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ----------------------------------------------------- tour */}
         <section className="land-section" id="tour">
           <div className="section-head">
             <h2>The whole business of brand deals, on one screen</h2>
@@ -203,7 +193,6 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        {/* ------------------------------------------------ free tools */}
         <section className="land-section" id="tools">
           <div className="section-head">
             <h2>Free tools — no signup, no card</h2>
@@ -217,7 +206,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ------------------------------------------------- pricing */}
         <section id="pricing" className="land-section">
           <div className="section-head">
             <h2>One payment. No mandate. No auto-debit.</h2>
@@ -253,7 +241,7 @@ export default function LandingPage() {
               name="Pro" amount={formatMoney(7990)} per="/year" savePct={17}
               note="≈ ₹666/mo — best value"
               alts={[`${formatMoney(1999)} / 3 months — save 17%`, `${formatMoney(799)} / month`]}
-              features={['Everything in Creator', 'Manage up to 10 creators', 'Brand-wise revenue reports', 'Auto monthly tax summary', 'Priority support']}
+              features={['Everything in Creator', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team workspaces & CA reports (coming soon — Pro members first)']}
               cta="Pay once for the year" href="/signup"
             /></Reveal>
           </div>
@@ -273,7 +261,6 @@ export default function LandingPage() {
           </div></Reveal>
         </section>
 
-        {/* ----------------------------------------------------- trust */}
         <section className="land-section" id="trust">
           <div className="section-head">
             <h2>Why you can trust this with your money data</h2>
@@ -297,7 +284,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ----------------------------------------------------- faq */}
         <section className="land-section">
           <div className="section-head">
             <h2>Questions creators actually ask</h2>
@@ -309,7 +295,6 @@ export default function LandingPage() {
             </div></Reveal>
         </section>
 
-        {/* --------------------------------------------------- final */}
         <section className="final-cta">
           <h2>One overdue invoice pays for three years of DealFlow.</h2>
           <p>Start free. Log the deal that&apos;s sitting unpaid right now and see what it says.</p>

@@ -1,14 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-/**
- * Route protection at the edge.
- *
- * Without this, /app is a statically prerendered shell that boots for anyone,
- * discovers a 401 from the API, and bounces back to /login — which reads as a
- * signup page that will not stay closed. Guarding here means an unauthenticated
- * visitor never loads the app shell at all.
- */
 
 const SESSION_COOKIE = 'dealflow_session';
 const PROTECTED = ['/app'];
@@ -24,11 +16,6 @@ function sessionSecret(): Uint8Array {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // CSRF defence. The sandbox preview needs a SameSite=None cookie, which
-  // browsers then attach to cross-site requests too — so any mutating call
-  // carrying a session cookie must come from the same origin. Server-to-server
-  // callers (webhooks, cron) send no Origin header and no cookie, so they are
-  // untouched.
   if (MUTATING.has(request.method) && request.cookies.get(SESSION_COOKIE)) {
     const origin = request.headers.get('origin') ?? request.headers.get('referer');
     if (origin) {
@@ -61,11 +48,6 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-/**
- * Middleware cannot read the database, so this only checks that the token is
- * well-formed and unexpired. Route handlers re-verify against the users table,
- * which is what actually authorises a request.
- */
 async function isValid(token: string): Promise<boolean> {
   try {
     await jwtVerify(token, sessionSecret());

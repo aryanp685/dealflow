@@ -5,9 +5,6 @@ import { computeDealMoney, overdueDays, ageingBucket, round2, toINR, USD_INR } f
 
 export const dynamic = 'force-dynamic';
 
-// Dashboard numbers, computed server-side so the money math lives in exactly
-// one place and is covered by unit tests. Headline totals blend USD deals
-// into INR at USD_INR; per-deal figures and the CSV keep the original currency.
 export async function GET() {
   try {
     const user = await requireUser();
@@ -62,18 +59,23 @@ export async function GET() {
 
       if (deal.payment_status === 'not_invoiced' && deal.status === 'negotiating') continue;
 
-      // Agreed and not yet paid — money still to come.
+      const month = monthOf(deal.agreed_on ?? '');
+      const row = byMonth.get(month) ?? { month, gross: 0, collected: 0 };
+      row.gross = round2(row.gross + blend(m.gross));
+      byMonth.set(month, row);
+
+      const billed =
+        deal.payment_status !== 'not_invoiced' ||
+        deal.status === 'delivered' ||
+        deal.status === 'invoiced';
+      if (!billed) continue;
+
       const owed =
         deal.advance_pct > 0 && deal.payment_status === 'advance_paid' ? m.balance_due : m.net_receivable;
       const owedInr = blend(owed);
       outstanding += owedInr;
       if (deal.currency === 'INR') inrOutstanding += owed;
       else usdOutstanding += owed;
-
-      const month = monthOf(deal.agreed_on ?? '');
-      const row = byMonth.get(month) ?? { month, gross: 0, collected: 0 };
-      row.gross = round2(row.gross + blend(m.gross));
-      byMonth.set(month, row);
 
       const days = overdueDays(deal.invoice_due_on, deal.payment_status, today);
       const bucket = ageingBucket(days);
@@ -109,6 +111,7 @@ export async function GET() {
 
     const paidCount = deals.filter((d) => d.payment_status === 'paid').length;
     const closedCount = deals.filter((d) => d.status !== 'negotiating' && d.status !== 'cancelled').length;
+    const liveCount = deals.filter((d) => d.status !== 'cancelled' && d.payment_status !== 'cancelled').length;
 
     const monthly = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-12);
     const monthlyGross = monthly.map((m) => m.gross);
@@ -133,7 +136,7 @@ export async function GET() {
         total_deals: deals.length,
         paid: paidCount,
         conversion_rate: closedCount > 0 ? Math.round((paidCount / closedCount) * 100) : 0,
-        avg_deal_value: deals.length > 0 ? round2(gross / deals.length) : 0,
+        avg_deal_value: liveCount > 0 ? round2(gross / liveCount) : 0,
         has_usd: hasUsd,
       },
       by_status: byStatus,

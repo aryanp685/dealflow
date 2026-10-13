@@ -43,46 +43,6 @@ export default function DealsTable({
   const [filter, setFilter] = useState<Filter>('all');
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  if (isLoading) {
-    return (
-      <m.div className="card table-card" variants={staggerParent} initial="initial" animate="animate">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Brand / deal</th>
-                <th>Stage</th>
-                <th>Payment</th>
-                <th>Deadline</th>
-                <th className="t-right">Value</th>
-                <th className="t-right">You receive</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {[0, 1, 2].map((i) => (
-                <tr key={i}>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div className="skeleton" style={{ width: '60%', height: 14 }} />
-                      <div className="skeleton" style={{ width: '40%', height: 12 }} />
-                    </div>
-                  </td>
-                  <td><div className="skeleton" style={{ width: '50%', height: 20 }} /></td>
-                  <td><div className="skeleton" style={{ width: '50%', height: 20 }} /></td>
-                  <td><div className="skeleton" style={{ width: '40%', height: 14 }} /></td>
-                  <td className="t-right"><div className="skeleton" style={{ width: '30%', height: 14, marginLeft: 'auto' }} /></td>
-                  <td className="t-right"><div className="skeleton" style={{ width: '30%', height: 14, marginLeft: 'auto' }} /></td>
-                  <td><div className="skeleton" style={{ width: '20px', height: 20 }} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </m.div>
-    );
-  }
-
   const filtered = useMemo(() => {
     if (filter === 'all') return deals;
     if (filter === 'paid') return deals.filter((d) => d.payment_status === 'paid');
@@ -137,6 +97,46 @@ export default function DealsTable({
     onError: (e: Error) => onChanged(e.message, 'err'),
   });
 
+  if (isLoading) {
+    return (
+      <m.div className="card table-card" variants={staggerParent} initial="initial" animate="animate">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Brand / deal</th>
+                <th>Stage</th>
+                <th>Payment</th>
+                <th>Deadline</th>
+                <th className="t-right">Value</th>
+                <th className="t-right">You receive</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {[0, 1, 2].map((i) => (
+                <tr key={i}>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div className="skeleton" style={{ width: '60%', height: 14 }} />
+                      <div className="skeleton" style={{ width: '40%', height: 12 }} />
+                    </div>
+                  </td>
+                  <td><div className="skeleton" style={{ width: '50%', height: 20 }} /></td>
+                  <td><div className="skeleton" style={{ width: '50%', height: 20 }} /></td>
+                  <td><div className="skeleton" style={{ width: '40%', height: 14 }} /></td>
+                  <td className="t-right"><div className="skeleton" style={{ width: '30%', height: 14, marginLeft: 'auto' }} /></td>
+                  <td className="t-right"><div className="skeleton" style={{ width: '30%', height: 14, marginLeft: 'auto' }} /></td>
+                  <td><div className="skeleton" style={{ width: '20px', height: 20 }} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </m.div>
+    );
+  }
+
   const askDelete = (d: Deal) => {
     if (window.confirm(`Delete the ${d.brand} deal? This cannot be undone.`)) remove.mutate(d.id);
   };
@@ -144,7 +144,7 @@ export default function DealsTable({
   const counts = {
     all: deals.length,
     open: deals.filter((d) => d.payment_status !== 'paid' && d.status !== 'cancelled').length,
-    overdue: deals.filter((d) => d.invoice_due_on && d.payment_status !== 'paid' && (daysUntil(d.invoice_due_on) ?? 1) < 0).length,
+    overdue: deals.filter((d) => d.invoice_due_on && d.payment_status !== 'paid' && d.payment_status !== 'cancelled' && (daysUntil(d.invoice_due_on) ?? 1) < 0).length,
     paid: deals.filter((d) => d.payment_status === 'paid').length,
   };
 

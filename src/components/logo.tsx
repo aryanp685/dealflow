@@ -1,10 +1,5 @@
 import { useId } from 'react';
 
-/**
- * DealFlow logo — an ascending pipeline (deal → delivery → paid) with the
- * money trendline over it. Inline SVG so it stays sharp at every size and
- * costs zero network requests.
- */
 export default function Logo({ size = 34, rounded = 11 }: { size?: number; rounded?: number }) {
   const gid = useId();
   return (

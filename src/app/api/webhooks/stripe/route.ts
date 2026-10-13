@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
-import { expectedMinorUnits } from '@/lib/schemas';
+import { countLifetimeSales, findPayment, getPlanInfo, grantPlan, insertPayment } from '@/lib/db';
+import { LIFETIME_CAP, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
-// Stripe rail — global cards + USD (and INR once the India invite lands).
-// Mirrors the Razorpay webhook: nothing is granted unless the signature
-// verifies, the event is a completed checkout, and the charged amount is
-// exactly the plan price.
 
 export async function POST(request: Request) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -45,7 +41,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, handled: false, error: 'unknown user' });
   }
 
-  // Exact-amount check, same rule as the Razorpay rail.
   const expected = expectedMinorUnits(plan, billing, currency);
   if (expected === null || session.amount_total !== expected) {
     console.warn('[stripe-webhook] amount mismatch — not granting', {
@@ -56,7 +51,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, handled: false, error: 'amount mismatch' });
   }
 
-  // Stripe retries; a duplicate delivery must not extend the plan twice.
   const already = await findPayment('stripe', session.id);
   if (already) return NextResponse.json({ received: true, handled: true, duplicate: true });
 
@@ -64,17 +58,27 @@ export async function POST(request: Request) {
   const existing = await getPlanInfo(userId);
   if (!existing) return NextResponse.json({ received: true, handled: false, error: 'unknown user' });
 
-  const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
-  const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+  let expiresAt: number | null;
+  if (billing === 'lifetime') {
+    if ((await countLifetimeSales()) >= LIFETIME_CAP) {
+      console.warn('[stripe-webhook] lifetime cap reached — payment needs a manual refund', { session: session.id, userId });
+      return NextResponse.json({ received: true, handled: false, error: 'lifetime sold out' });
+    }
+    expiresAt = null;
+  } else {
+    const durationMs = (billing === 'yearly' ? 365 : billing === 'quarterly' ? 90 : 30) * 86_400_000;
+    const base = existing.plan_expires_at && existing.plan_expires_at > now ? existing.plan_expires_at : now;
+    expiresAt = base + durationMs;
+  }
 
-  await grantPlan(userId, plan, base + durationMs);
+  await grantPlan(userId, plan, expiresAt);
   await insertPayment({
     provider: 'stripe',
     provider_payment_id: session.id,
     user_id: userId,
     plan,
     billing,
-    amount: (session.amount_total ?? 0) / 100,
+    amount: session.amount_total ?? 0,
     currency,
   });
 

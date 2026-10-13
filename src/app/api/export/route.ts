@@ -5,10 +5,6 @@ import { computeDealMoney, overdueDays } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 
-// CSV of every deal with the full GST/TDS split, in the columns an accountant
-// asks for rather than the ones the UI happens to show. ?format=zoho switches
-// to an invoice-shaped file that imports straight into Zoho Invoice, so the
-// tool complements the accountant's software instead of fighting it.
 export async function GET(request: Request) {
   try {
     const user = await requireUser();
@@ -78,9 +74,9 @@ export async function GET(request: Request) {
   }
 }
 
-// RFC 4180: quote the field and double any embedded quote.
 function escapeCsv(value: string): string {
-  const needsQuotes = /[",\r\n]/.test(value);
-  const escaped = value.replace(/"/g, '""');
+  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  const needsQuotes = /[",\r\n]/.test(safe);
+  const escaped = safe.replace(/"/g, '""');
   return needsQuotes ? `"${escaped}"` : escaped;
 }

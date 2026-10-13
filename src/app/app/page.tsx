@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Reads the session cookie, so this can never be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
 export default async function AppPage() {

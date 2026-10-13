@@ -1,9 +1,3 @@
-/**
- * Unit tests for the money + reminder logic — the parts of DealFlow where a
- * bug means a creator gets paid the wrong amount or sends the wrong message.
- *
- * Run with: npm test
- */
 const test = require('node:test');
 const assert = require('node:assert');
 
@@ -14,7 +8,6 @@ const {
   computeDealMoney, overdueDays, ageingBucket, daysUntil, round2, clamp,
 } = lib;
 
-/* ------------------------------------------------------- computeDealMoney */
 
 test('plain INR deal with 10% TDS: net = gross - TDS', () => {
   const m = computeDealMoney({ deal_value: 10000, advance_pct: 0, tds_pct: 10, gst_applicable: 0 });
@@ -26,8 +19,6 @@ test('plain INR deal with 10% TDS: net = gross - TDS', () => {
 });
 
 test('GST is added on top and TDS is charged on gross, not on gross+GST', () => {
-  // ₹25,000 + 18% GST = ₹29,500 invoice. TDS 10% applies to ₹25,000 = ₹2,500.
-  // Net to creator = 29,500 - 2,500 = ₹27,000.
   const m = computeDealMoney({ deal_value: 25000, advance_pct: 0, tds_pct: 10, gst_applicable: 1 });
   assert.equal(m.gst_amount, 4500);
   assert.equal(m.invoice_total, 29500);
@@ -77,7 +68,6 @@ test('rounding stays clean on awkward numbers', () => {
   assert.equal(round2(m.advance_due + m.balance_due), m.net_receivable);
 });
 
-/* ---------------------------------------------------------- overdueDays */
 
 const TODAY = new Date('2026-09-21T12:00:00');
 
@@ -118,11 +108,9 @@ test('money math is exact at paisa level for every realistic input', () => {
       for (const a of [0, 33, 50, 100]) {
         for (const gst of [0, 1]) {
           const m = lib.computeDealMoney({ deal_value: v, advance_pct: a, tds_pct: t, gst_applicable: gst });
-          // every field is an exact paisa amount
           for (const key of Object.keys(m)) {
             assert.ok(Number.isInteger(paise(m[key])), `${key} must be paisa-exact`);
           }
-          // the invariants an accountant checks, in integer paise
           assert.equal(paise(m.gross) + paise(m.gst_amount), paise(m.invoice_total));
           assert.equal(paise(m.invoice_total) - paise(m.tds_amount), paise(m.net_receivable));
           assert.equal(paise(m.advance_due) + paise(m.balance_due), paise(m.net_receivable));
@@ -155,7 +143,6 @@ test('clamp', () => {
   assert.equal(clamp(42, 0, 100), 42);
 });
 
-/* ------------------------------------------------------------- reminders */
 
 function deal(overrides = {}) {
   return {
@@ -279,8 +266,8 @@ test('cancelled deals generate nothing', () => {
 
 test('reminders are ordered most urgent first', () => {
   const list = buildReminders([
-    deal({ id: 1, brand: 'Late', invoice_due_on: '2026-08-01' }),          // 3 - final
-    deal({ id: 2, brand: 'Soon', invoice_due_on: '2026-09-16' }),          // 1 - nudge
+    deal({ id: 1, brand: 'Late', invoice_due_on: '2026-08-01' }),
+    deal({ id: 2, brand: 'Soon', invoice_due_on: '2026-09-16' }),
   ], TODAY);
   assert.ok(list.length >= 2);
   assert.equal(list[0].urgency, 3);
@@ -299,13 +286,34 @@ test('digest with nothing due says so', () => {
   assert.equal(reminderDigest([]), 'Nothing needs your attention today. 🎉');
 });
 
-/* -------------------------------------------------------------- database */
+
+const { tdsSectionFor } = require('../test-build/money.js');
+
+test('tds sections map to the right statute', () => {
+  assert.equal(tdsSectionFor(10), '194J');
+  assert.equal(tdsSectionFor(5), '194H');
+  assert.equal(tdsSectionFor(2), '194O');
+  assert.equal(tdsSectionFor(20), '206AA');
+  assert.equal(tdsSectionFor(0), null);
+  assert.equal(tdsSectionFor(7), null, 'custom percentages must not guess a section');
+});
+
+test('a 2% TDS invoice cites 194O, not 194H', () => {
+  const list = buildReminders([deal({
+    status: 'delivered', payment_status: 'not_invoiced',
+    invoice_due_on: null, delivered_on: '2026-09-18', tds_pct: 2,
+  })], TODAY);
+  const r = list.find((x) => x.kind === 'invoice_not_sent');
+  assert.ok(r);
+  assert.match(r.send_text, /194O/);
+  assert.doesNotMatch(r.send_text, /194H/);
+});
+
 
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-// Point at a throwaway database before requiring the module fresh.
 process.env.DEALFLOW_DB_PATH = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dealflow-')), 'test.db');
 delete require.cache[require.resolve('../test-build/db.js')];
 const store = require('../test-build/db.js');
@@ -333,7 +341,6 @@ test('schema migrates and a deal round-trips through SQLite', async () => {
   assert.equal(deal.brand, 'boAt');
   assert.equal(deal.status, 'negotiating');
   assert.equal(deal.payment_status, 'not_invoiced');
-  // 45000 + 8100 GST - 4500 TDS = 48600
   assert.equal(store.computeDealMoney(deal).net_receivable, 48600);
 });
 
@@ -380,6 +387,28 @@ test('updateDeal changes only what it is given', async () => {
   assert.match(updated.updated_at, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, 'updated_at must be stamped');
 });
 
+test('lifetime sales are counted for the 50-spot cap', async () => {
+  const user = await mkUser('lifetime@test.com');
+  assert.equal(await store.countLifetimeSales(), 0);
+  await store.insertPayment({
+    provider: 'razorpay', provider_payment_id: 'pay_life_1', user_id: user.id,
+    plan: 'pro', billing: 'lifetime', amount: 749900, currency: 'INR',
+  });
+  await store.insertPayment({
+    provider: 'stripe', provider_payment_id: 'cs_monthly_1', user_id: user.id,
+    plan: 'creator', billing: 'monthly', amount: 900, currency: 'USD',
+  });
+  assert.equal(await store.countLifetimeSales(), 1, 'only lifetime billings count');
+});
+
+test('lifetime pricing is exact and Pro-only', () => {
+  const { expectedMinorUnits } = require('../test-build/schemas.js');
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'INR'), 749900);
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'USD'), 14900);
+  assert.equal(expectedMinorUnits('creator', 'lifetime', 'INR'), null);
+  assert.equal(expectedMinorUnits('pro', 'lifetime', 'EUR'), null);
+});
+
 test('deleting a deal leaves the user intact', async () => {
   const user = await mkUser('delete@test.com');
   const deal = await mkDeal(user.id);
@@ -398,7 +427,6 @@ test('unique email is enforced at the database level', async () => {
   );
 });
 
-/* -------------------------------------------------------------- schemas */
 
 const { createDealSchema, updateDealSchema, signupSchema, PLANS } = require('../test-build/schemas.js');
 
@@ -470,7 +498,6 @@ test('free plan is capped at 3 active deals', () => {
   assert.equal(PLANS.creator.price_usd, 9);
 });
 
-/* --------------------------------------------------------- rate limiting */
 
 const { rateLimit, resetRateLimits, clientIp, LIMITS } = require('../test-build/rate-limit.js');
 
@@ -499,7 +526,7 @@ test('rate limiter resets after the window closes', async () => {
   await rateLimit(key, tiny); await rateLimit(key, tiny); await rateLimit(key, tiny);
   assert.equal((await rateLimit(key, tiny)).ok, false);
   const until = Date.now() + 60;
-  while (Date.now() < until) { /* let the window elapse */ }
+  while (Date.now() < until) { }
   assert.equal((await rateLimit(key, tiny)).ok, true, 'window should have slid');
 });
 
@@ -509,7 +536,6 @@ test('clientIp prefers x-forwarded-for and takes the first hop', () => {
   assert.equal(clientIp(new Request('http://x')), 'unknown');
 });
 
-/* --------------------------------------------------------- webhook HMAC */
 
 const { createHmac, timingSafeEqual } = require('node:crypto');
 
@@ -545,11 +571,8 @@ test('a non-hex signature is rejected rather than throwing', () => {
   assert.equal(verify('{"a":1}', 'not-hex-at-all-zzzz', 'whsec_test'), false);
 });
 
-/* ------------------------------------------------------- plan expiry */
 
 const { effectivePlan } = (() => {
-  // auth.ts is Next-bound; replicate the single rule under test so the pure
-  // behaviour is covered without importing next/headers.
   return {
     effectivePlan: (u) => {
       if (u.plan === 'free') return 'free';
@@ -575,7 +598,6 @@ test('a plan with no expiry never lapses', () => {
   assert.equal(effectivePlan({ plan: 'pro', plan_expires_at: null }), 'pro');
 });
 
-/* ------------------------------------------------------ MSME interest math */
 
 const { msmeInterest } = require('../test-build/msme.js');
 
@@ -586,8 +608,6 @@ test('msme interest is zero within the window and on zero principal', () => {
 });
 
 test('msme interest compounds monthly at 3x the 6.5% bank rate', () => {
-  // 19.5% p.a. monthly-compounded over exactly 3 months (90 days):
-  // 10000 * (1.01625^3 - 1) = 495.46
   const r = msmeInterest(10000, 90);
   assert.equal(r.rate_pct, 19.5);
   assert.equal(r.interest, 495.46);
@@ -609,7 +629,6 @@ test('msme interest never produces fractional paise', () => {
   }
 });
 
-/* ------------------------------------------------------- quarterly pricing */
 
 test('quarterly plan prices are exact on both rails', () => {
   const { expectedMinorUnits } = require('../test-build/schemas.js');
@@ -631,7 +650,6 @@ test('yearly is cheaper than 12 months and quarterly cheaper than 3', () => {
   }
 });
 
-/* --------------------------------------------- demand notice (30+ days late) */
 
 test('31-45 days overdue produces an MSME demand notice with interest', () => {
   const list = buildReminders([deal({ invoice_due_on: '2026-08-12' })], TODAY);
@@ -642,8 +660,6 @@ test('31-45 days overdue produces an MSME demand notice with interest', () => {
   assert.match(r.send_text, /Section 15/);
   assert.match(r.send_text, /samadhaan\.msme\.gov\.in/);
   assert.match(r.send_text, /Payment terms were 15 days from invoice date/);
-  // invoice_total is 20000 (no GST); 40 days at 19.5% compound:
-  // 20000 * (1.01625^(40/30) - 1) = 434.50 -> total 20434.50
   assert.match(r.send_text, /20,434\.50/);
   assert.match(r.message, /Section 15 interest/);
 });

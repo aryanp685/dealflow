@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-// Every request body is parsed here, so invalid input is rejected at the
-// boundary with a readable message instead of reaching SQL as a 500.
 
 export const DEAL_STATUSES = [
   'negotiating', 'agreed', 'delivering', 'delivered', 'invoiced', 'paid', 'cancelled',
@@ -19,7 +17,6 @@ export const PLATFORMS = [
 
 export const CURRENCIES = ['INR', 'USD'] as const;
 
-// new Date('2026-02-31') rolls over to 3 March, so round-trip the parts.
 function isRealCalendarDate(iso: string): boolean {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
@@ -36,16 +33,11 @@ const isoDate = z
   .refine(isRealCalendarDate, 'must be a real calendar date')
   .nullish();
 
-// Trimmed free text; empty or absent collapses to null. The .optional() has
-// to sit outside the transform — a union containing z.undefined() does not
-// make the key optional at object level.
 const optionalText = z
   .union([z.string(), z.null()])
   .transform((v) => (typeof v === 'string' && v.trim() ? v.trim() : null))
   .optional();
 
-// Trim before the email check: addresses pasted from a mail client carry a
-// trailing space, and rejecting one reads as a broken form.
 const optionalEmail = z
   .union([z.string(), z.null()])
   .transform((v) => (typeof v === 'string' ? v.trim().toLowerCase() : ''))
@@ -84,7 +76,6 @@ export const createDealSchema = z.object({
   notes: optionalText,
 });
 
-/** PATCH accepts a subset; unknown keys are stripped rather than erroring. */
 export const updateDealSchema = createDealSchema.partial().extend({
   brand: z.string().trim().min(1, 'brand cannot be empty').max(120).optional(),
   title: z.string().trim().min(1, 'title cannot be empty').max(200).optional(),
@@ -118,21 +109,21 @@ export type DealInput = z.infer<typeof createDealSchema>;
 export type DealUpdate = z.infer<typeof updateDealSchema>;
 export type PaymentLinkInput = z.infer<typeof paymentLinkSchema>;
 
-// Enforced in the deals route; a client-side check alone is decorative.
-// Yearly is the default everywhere in the UI: in India a monthly recurring
-// debit needs a UPI/card mandate, and mandate creation fails for a third to a
-// half of all attempts. One annual UPI payment has no mandate and no renewal
-// failure mode — the app emails a renewal link instead.
 export const PLANS = {
   free: { key: 'free', label: 'Free', max_active_deals: 3, max_brands: Infinity, price_inr: 0, price_usd: 0, quarterly_inr: 0, quarterly_usd: 0, yearly_inr: 0, yearly_usd: 0 },
   creator: { key: 'creator', label: 'Creator', max_active_deals: Infinity, max_brands: Infinity, price_inr: 299, price_usd: 9, quarterly_inr: 699, quarterly_usd: 21, yearly_inr: 2990, yearly_usd: 90 },
   pro: { key: 'pro', label: 'Pro', max_active_deals: Infinity, max_brands: Infinity, price_inr: 799, price_usd: 19, quarterly_inr: 1999, quarterly_usd: 49, yearly_inr: 7990, yearly_usd: 190 },
 } as const;
 
-// Both rails charge in minor units (paise / cents). Every webhook refuses any
-// captured payment whose amount is not exactly the plan price, so a ₹1 payment
-// can never unlock Pro.
+export const LIFETIME_CAP = 50;
+export const LIFETIME_PRICE = { INR: 7499, USD: 149 } as const;
+
 export function expectedMinorUnits(plan: string, billing: string, currency: 'INR' | 'USD'): number | null {
+  if (currency !== 'INR' && currency !== 'USD') return null;
+  if (billing === 'lifetime') {
+    if (plan !== 'pro') return null;
+    return LIFETIME_PRICE[currency] * 100;
+  }
   const p = PLANS[plan as PlanKey];
   if (!p) return null;
   const value =

@@ -32,7 +32,6 @@ export default function Reminders({
       await navigator.clipboard.writeText(text);
       notify('Copied — paste it into WhatsApp or email');
     } catch {
-      // Clipboard API needs a secure context; fall back so the feature never dead-ends.
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';

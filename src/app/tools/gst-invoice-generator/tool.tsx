@@ -48,7 +48,7 @@ export default function GstInvoiceTool() {
       await navigator.clipboard.writeText(invoiceText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard unavailable — text is on screen */ }
+    } catch { }
   };
 
   return (
