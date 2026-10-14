@@ -192,3 +192,9 @@ Already shipped: Postgres/Supabase driver, Razorpay + Stripe webhooks (grant-onl
 Built as the first of two products. The second — a review collector for local businesses — reuses this stack.
 
 Live at https://dealflow-lyart-eight.vercel.app
+
+---
+
+## License
+
+Source-available, not open-source. See [LICENSE](LICENSE).
