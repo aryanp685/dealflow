@@ -80,6 +80,16 @@ create table if not exists password_resets (
              default to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
 
+create table if not exists licenses (
+  license_key text    not null primary key,
+  user_id     integer not null unique references users (id) on delete cascade,
+  buyer_email text    not null,
+  product_link text   not null,
+  redeemed_at text    not null
+              default to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+create index if not exists idx_licenses_user  on licenses (user_id);
 create index if not exists idx_resets_user   on password_resets (user_id);
 create index if not exists idx_deals_creator on deals (creator_id);
 create index if not exists idx_deals_status  on deals (status);
@@ -90,3 +100,4 @@ alter table users          enable row level security;
 alter table payments       enable row level security;
 alter table deals          enable row level security;
 alter table password_resets enable row level security;
+alter table licenses       enable row level security;

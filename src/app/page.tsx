@@ -67,6 +67,7 @@ export default function LandingPage() {
             </p>
             <div className="hero-cta">
               <Link href="/signup" className="btn primary lg">Start free — see your stuck money</Link>
+              <Link href="/demo" className="btn lg">View live demo</Link>
               <a href="#features" className="btn lg">See how it works</a>
             </div>
             <div className="hero-proof">

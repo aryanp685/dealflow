@@ -31,7 +31,7 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Nothing is required in `.env.local` to run locally. Copy `.env.example` when you add payments.
+Nothing is required in `.env.local` to run locally. Copy `.env.example` when you add payments. A public demo with sample deals lives at `/demo` — no signup needed.
 
 1. Create an account at `/signup`
 2. Click **Load sample deals** — six realistic deals appear (one overdue, one due soon, one delivered-but-not-invoiced, one paid, one USD)
@@ -73,6 +73,25 @@ The tests compile `src/lib/*` with `tsc` and run against the **real compiled out
 3. Run `supabase/schema.sql` once on your Supabase project, then deploy
 
 The daily digest cron (`/api/cron/digest`, 08:30 IST) is configured in `vercel.json` and runs automatically.
+
+---
+
+## Selling on Payhip
+
+Buyers purchase on Payhip, get a license key instantly, then sign up on your
+deployed app and paste the key on the **Pricing** tab to unlock Pro forever.
+One key works on one account; refunded keys are auto-disabled by Payhip and the
+app downgrades those accounts back to free on the next license check.
+
+Seller setup (one time):
+
+1. Payhip → new product → type **Software**, price in INR (₹499 launch works)
+2. On the product page enable **license keys** (auto-generate per order)
+3. Copy the **product secret key** and **product link** from that page
+4. Vercel → project → Settings → Environment Variables → set
+   `PAYHIP_PRODUCT_SECRET` and `PAYHIP_PRODUCT_LINK`, then redeploy
+5. In the Payhip product description, tell buyers: sign up at
+   `YOUR-SITE/app`, open **Pricing**, paste the key from the Payhip receipt
 
 ---
 

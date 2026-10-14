@@ -1,12 +1,21 @@
 import type { DbDriver } from './db-types';
 import { driver as sqliteDriver, resetDbHandle as resetSqlite } from './db-sqlite';
-import { driver as pgDriver } from './db-postgres';
+import { driver as pgDriver, ready as pgReady } from './db-postgres';
 
 
 export { computeDealMoney, overdueDays, ageingBucket, daysUntil, round2, clamp, todayISO, toINR, USD_INR, toPaise } from './money';
 export type { Deal, User, UserAuthRow, PlanInfo, ResetRow, PaymentRow } from './db-types';
 
-const active: DbDriver = process.env.DATABASE_URL ? pgDriver : sqliteDriver;
+const guardedPg: DbDriver = new Proxy(pgDriver, {
+  get(target, prop) {
+    const value = (target as unknown as Record<PropertyKey, unknown>)[prop];
+    if (typeof value !== 'function') return value;
+    return (...args: unknown[]) =>
+      pgReady().then(() => (value as (...a: unknown[]) => Promise<unknown>).apply(target, args));
+  },
+});
+
+const active: DbDriver = process.env.DATABASE_URL ? guardedPg : sqliteDriver;
 
 export async function listUsers() {
   return active.listUsers();
@@ -84,6 +93,16 @@ export async function insertPayment(p: {
   currency: string;
 }) {
   return active.insertPayment(p);
+}
+
+export async function getLicenseByKey(key: string) {
+  return active.getLicenseByKey(key);
+}
+export async function getLicenseByUserId(userId: number) {
+  return active.getLicenseByUserId(userId);
+}
+export async function insertLicense(row: { license_key: string; user_id: number; buyer_email: string; product_link: string }) {
+  return active.insertLicense(row);
 }
 
 export async function resetDbHandle() {

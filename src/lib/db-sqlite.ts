@@ -115,6 +115,16 @@ function migrate(database: Database.Database) {
       created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS licenses (
+      license_key TEXT PRIMARY KEY,
+      user_id     INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      buyer_email TEXT    NOT NULL,
+      product_link TEXT   NOT NULL,
+      redeemed_at TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_licenses_user ON licenses(user_id);
+
     CREATE INDEX IF NOT EXISTS idx_resets_user ON password_resets(user_id);
 
     CREATE INDEX IF NOT EXISTS idx_deals_creator ON deals(creator_id);
@@ -277,5 +287,23 @@ export const driver: DbDriver = {
          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
       )
       .run(p.provider, p.provider_payment_id, p.user_id, p.plan, p.billing, p.amount, p.currency);
+  },
+
+  async getLicenseByKey(key) {
+    return handle()
+      .prepare('SELECT license_key, user_id, buyer_email, product_link, redeemed_at FROM licenses WHERE license_key = ?')
+      .get(key) as never;
+  },
+
+  async getLicenseByUserId(userId) {
+    return handle()
+      .prepare('SELECT license_key, user_id, buyer_email, product_link, redeemed_at FROM licenses WHERE user_id = ?')
+      .get(userId) as never;
+  },
+
+  async insertLicense(row) {
+    handle()
+      .prepare('INSERT INTO licenses (license_key, user_id, buyer_email, product_link) VALUES (?, ?, ?, ?)')
+      .run(row.license_key, row.user_id, row.buyer_email, row.product_link);
   },
 };

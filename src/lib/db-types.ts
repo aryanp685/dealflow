@@ -18,6 +18,14 @@ export type ResetRow = { user_id: number; expires_at: number; used_at: number | 
 
 export type PaymentRow = { id: number };
 
+export type LicenseRow = {
+  license_key: string;
+  user_id: number;
+  buyer_email: string;
+  product_link: string;
+  redeemed_at: string;
+};
+
 export type Deal = {
   id: number;
   creator_id: number;
@@ -82,6 +90,10 @@ export interface DbDriver {
     amount: number;
     currency: string;
   }): Promise<void>;
+
+  getLicenseByKey(key: string): Promise<LicenseRow | undefined>;
+  getLicenseByUserId(userId: number): Promise<LicenseRow | undefined>;
+  insertLicense(row: { license_key: string; user_id: number; buyer_email: string; product_link: string }): Promise<void>;
 }
 
 export function normalizeValue(v: unknown): unknown {
