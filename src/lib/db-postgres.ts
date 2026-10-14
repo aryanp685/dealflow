@@ -155,4 +155,56 @@ export const driver: DbDriver = {
       [p.provider, p.provider_payment_id, p.user_id, p.plan, p.billing, p.amount, p.currency]
     );
   },
+
+  async getLicenseByKey(key) {
+    const rows =
+      await sql()`SELECT license_key, user_id, buyer_email, product_link, redeemed_at FROM licenses WHERE license_key = ${key}`;
+    return rows[0] as never;
+  },
+
+  async getLicenseByUserId(userId) {
+    const rows =
+      await sql()`SELECT license_key, user_id, buyer_email, product_link, redeemed_at FROM licenses WHERE user_id = ${userId}`;
+    return rows[0] as never;
+  },
+
+  async insertLicense(row) {
+    await sql()`INSERT INTO licenses (license_key, user_id, buyer_email, product_link)
+                VALUES (${row.license_key}, ${row.user_id}, ${row.buyer_email}, ${row.product_link})`;
+  },
 };
+
+let _ready: Promise<void> | null = null;
+
+export function ready(): Promise<void> {
+  _ready ??= migrate().then(
+    () => undefined,
+    () => undefined
+  );
+  return _ready;
+}
+
+async function migrate(): Promise<void> {
+  const stmts = [
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE deals ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER NOT NULL DEFAULT 15',
+    'ALTER TABLE deals ADD COLUMN IF NOT EXISTS escalation_contact TEXT',
+    'ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT \'razorpay\'',
+    'ALTER TABLE payments ADD COLUMN IF NOT EXISTS billing TEXT NOT NULL DEFAULT \'monthly\'',
+    'ALTER TABLE payments RENAME COLUMN razorpay_payment_id TO provider_payment_id',
+    `CREATE TABLE IF NOT EXISTS licenses (
+      license_key TEXT NOT NULL PRIMARY KEY,
+      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      buyer_email TEXT NOT NULL,
+      product_link TEXT NOT NULL,
+      redeemed_at TEXT NOT NULL DEFAULT (to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_licenses_user ON licenses(user_id)',
+  ];
+  for (const s of stmts) {
+    try {
+      await sql().unsafe(s);
+    } catch {
+    }
+  }
+}

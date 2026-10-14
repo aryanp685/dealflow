@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { deleteDeal, getDeal, updateDeal } from '@/lib/db';
-import { updateDealSchema } from '@/lib/schemas';
+import { UnauthorizedError, effectivePlan, requireUser } from '@/lib/auth';
+import { countActiveDeals, deleteDeal, getDeal, updateDeal } from '@/lib/db';
+import { PLANS, updateDealSchema, type PlanKey } from '@/lib/schemas';
 import { todayISO } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
@@ -73,6 +73,26 @@ export async function PATCH(req: Request, { params }: Params) {
     }
     if (updates.payment_status === 'paid' && !('invoice_sent_on' in updates) && !existing.invoice_sent_on) {
       updates.invoice_sent_on = today;
+    }
+
+    const wasActive = existing.status !== 'paid' && existing.status !== 'cancelled' && existing.payment_status !== 'paid';
+    const nextStatus = (updates.status as string | undefined) ?? existing.status;
+    const nextPayStat = (updates.payment_status as string | undefined) ?? existing.payment_status;
+    const willBeActive = nextStatus !== 'paid' && nextStatus !== 'cancelled' && nextPayStat !== 'paid';
+    if (!wasActive && willBeActive) {
+      const plan = PLANS[effectivePlan(user) as PlanKey] ?? PLANS.free;
+      const activeCount = await countActiveDeals(user.id);
+      if (activeCount >= plan.max_active_deals) {
+        return NextResponse.json(
+          {
+            error: `The ${plan.label} plan covers ${plan.max_active_deals} active deals. Upgrade to keep tracking more.`,
+            code: 'plan_limit',
+            limit: plan.max_active_deals,
+            active: activeCount,
+          },
+          { status: 402 }
+        );
+      }
     }
 
     if (Object.keys(updates).length === 0) {

@@ -399,6 +399,89 @@ function planPrice(
       : p.price_usd;
 }
 
+type LicenseStatus = {
+  licensed: boolean;
+  verified?: boolean;
+  buyerEmail?: string;
+  reason?: string;
+};
+
+function LicenseRedeem({
+  notify,
+}: {
+  notify: (msg: string, tone?: "ok" | "err") => void;
+}) {
+  const [key, setKey] = useState("");
+  const statusQuery = useQuery({
+    queryKey: ["license-status"],
+    queryFn: async (): Promise<LicenseStatus> => {
+      const res = await fetch("/api/license/status");
+      if (!res.ok) throw new Error("Could not check license");
+      return res.json();
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+  const redeem = useMutation({
+    mutationFn: async (licenseKey: string) => {
+      const res = await fetch("/api/license/redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key: licenseKey }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? "Could not redeem key");
+      return j;
+    },
+    onSuccess: () => {
+      notify("Pro unlocked — welcome aboard", "ok");
+      window.location.reload();
+    },
+    onError: (e) => notify((e as Error).message, "err"),
+  });
+  const status = statusQuery.data;
+  return (
+    <m.div className="card" variants={listItem}>
+      <h3 className="card-title">Bought DealFlow on Payhip?</h3>
+      {status?.licensed ? (
+        <p className="card-sub">
+          Pro is active on this account
+          {status.buyerEmail ? ` (${status.buyerEmail})` : ""}. Your Payhip
+          receipt has the key if you ever need it again.
+        </p>
+      ) : (
+        <>
+          <p className="card-sub">
+            Paste the license key from your Payhip receipt to unlock Pro,
+            forever.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <label className="field" style={{ flex: "1 1 220px", marginBottom: 0 }}>
+              <label>License key</label>
+              <input
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+                autoComplete="off"
+                spellCheck={false}
+                style={{ textTransform: "uppercase" }}
+              />
+            </label>
+            <button
+              className="btn primary"
+              style={{ alignSelf: "flex-end" }}
+              disabled={redeem.isPending || key.trim().length < 8}
+              onClick={() => redeem.mutate(key)}
+            >
+              {redeem.isPending ? "Checking…" : "Redeem key"}
+            </button>
+          </div>
+        </>
+      )}
+    </m.div>
+  );
+}
+
 function Pricing({
   current,
   notify,
@@ -575,6 +658,8 @@ function Pricing({
           </div>
         )}
       </m.div>
+
+      <LicenseRedeem notify={notify} />
     </m.div>
   );
 }

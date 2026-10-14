@@ -710,3 +710,104 @@ test('brand payment history is quoted in chase guidance', () => {
   assert.match(r.message, /History: this brand has settled 1 invoice in ~70 days/);
   assert.match(r.message, /paid late 1 time/);
 });
+
+const { payhipConfigured, verifyLicenseKey } = require('../test-build/payhip.js');
+
+function stubFetch(fn) {
+  const real = global.fetch;
+  global.fetch = fn;
+  return () => { global.fetch = real; };
+}
+
+test('payhip: reports not_configured when env vars are missing', async () => {
+  delete process.env.PAYHIP_PRODUCT_SECRET;
+  delete process.env.PAYHIP_PRODUCT_LINK;
+  assert.equal(payhipConfigured(), false);
+  assert.deepEqual(await verifyLicenseKey('AAAAA-BBBBB-CCCCC-DDDDD'), { ok: false, reason: 'not_configured' });
+});
+
+test('payhip: accepts an enabled key for our product, uppercases input', async () => {
+  process.env.PAYHIP_PRODUCT_SECRET = 'secret';
+  process.env.PAYHIP_PRODUCT_LINK = 'mVT0';
+  const restore = stubFetch(async (url, opts) => {
+    assert.match(url, /license_key=AAAAA-BBBBB-CCCCC-DDDDD/);
+    assert.equal(opts.headers['product-secret-key'], 'secret');
+    return {
+      ok: true,
+      json: async () => ({
+        data: {
+          enabled: true, product_link: 'mVT0', license_key: 'AAAAA-BBBBB-CCCCC-DDDDD',
+          buyer_email: 'buyer@example.com', uses: 0,
+        },
+      }),
+    };
+  });
+  try {
+    assert.deepEqual(await verifyLicenseKey('aaaaa-bbbbb-ccccc-ddddd'), {
+      ok: true, buyerEmail: 'buyer@example.com', productLink: 'mVT0', uses: 0,
+    });
+  } finally {
+    restore();
+    delete process.env.PAYHIP_PRODUCT_SECRET;
+    delete process.env.PAYHIP_PRODUCT_LINK;
+  }
+});
+
+test('payhip: rejects disabled keys, wrong products and empty responses', async () => {
+  process.env.PAYHIP_PRODUCT_SECRET = 'secret';
+  process.env.PAYHIP_PRODUCT_LINK = 'mVT0';
+  const cases = [
+    [{ data: { enabled: false, product_link: 'mVT0', license_key: 'K' } }, 'disabled'],
+    [{ data: { enabled: true, product_link: 'OTHER', license_key: 'K' } }, 'wrong_product'],
+    [{}, 'invalid'],
+    [null, 'invalid'],
+  ];
+  for (const [payload, reason] of cases) {
+    const restore = stubFetch(async () => ({ ok: true, json: async () => payload }));
+    try {
+      assert.deepEqual(await verifyLicenseKey('K-K-K-K-K-K-K-K'), { ok: false, reason });
+    } finally {
+      restore();
+    }
+  }
+  const restore404 = stubFetch(async () => ({ ok: false }));
+  try {
+    assert.deepEqual(await verifyLicenseKey('K-K-K-K-K-K-K-K'), { ok: false, reason: 'invalid' });
+  } finally {
+    restore404();
+  }
+  delete process.env.PAYHIP_PRODUCT_SECRET;
+  delete process.env.PAYHIP_PRODUCT_LINK;
+});
+
+test('payhip: network failures map to network and never throw', async () => {
+  process.env.PAYHIP_PRODUCT_SECRET = 'secret';
+  process.env.PAYHIP_PRODUCT_LINK = 'mVT0';
+  const restore = stubFetch(async () => { throw new Error('down'); });
+  try {
+    assert.deepEqual(await verifyLicenseKey('AAAAA-BBBBB-CCCCC-DDDDD'), { ok: false, reason: 'network' });
+  } finally {
+    restore();
+    delete process.env.PAYHIP_PRODUCT_SECRET;
+    delete process.env.PAYHIP_PRODUCT_LINK;
+  }
+});
+
+const { getDemoDeals } = require('../test-build/demo.js');
+
+test('demo: six sample deals covering every payment state', () => {
+  const deals = getDemoDeals();
+  assert.equal(deals.length, 6);
+  const states = new Set(deals.map((d) => d.payment_status));
+  for (const s of ['overdue', 'invoiced', 'advance_paid', 'not_invoiced', 'paid']) {
+    assert.ok(states.has(s), `missing ${s}`);
+  }
+  assert.ok(deals.some((d) => d.currency === 'USD'));
+});
+
+test('demo: every sample deal computes money without throwing', () => {
+  for (const d of getDemoDeals()) {
+    const m = computeDealMoney(d);
+    assert.ok(Number.isFinite(m.net_receivable));
+  }
+});
