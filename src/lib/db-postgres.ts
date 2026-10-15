@@ -26,7 +26,7 @@ const DEAL_COLS = [
 
 export const driver: DbDriver = {
   async listUsers() {
-    const rows = await sql()`SELECT id, name, email FROM users ORDER BY id`;
+    const rows = await sql()`SELECT id, name, email, upi_id FROM users ORDER BY id`;
     return rows as never;
   },
 
@@ -84,13 +84,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     const rows =
-      await sql()`SELECT id, name, email, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ${email.toLowerCase()}`;
+      await sql()`SELECT id, name, email, upi_id, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ${email.toLowerCase()}`;
     return rows[0] as never;
   },
 
   async findUserById(id) {
     const rows =
-      await sql()`SELECT id, name, email, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ${id}`;
+      await sql()`SELECT id, name, email, upi_id, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ${id}`;
     return rows[0] as never;
   },
 
@@ -122,6 +122,10 @@ export const driver: DbDriver = {
 
   async grantPlan(userId, plan, planExpiresAt) {
     await sql()`UPDATE users SET plan = ${plan}, plan_expires_at = ${planExpiresAt} WHERE id = ${userId}`;
+  },
+
+  async updateUpiId(userId, upiId) {
+    await sql()`UPDATE users SET upi_id = ${upiId} WHERE id = ${userId}`;
   },
 
   async invalidateLiveResets(userId, usedAt) {
@@ -187,6 +191,7 @@ export function ready(): Promise<void> {
 async function migrate(): Promise<void> {
   const stmts = [
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id TEXT',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER NOT NULL DEFAULT 15',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS escalation_contact TEXT',
     'ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT \'razorpay\'',

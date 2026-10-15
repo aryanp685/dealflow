@@ -36,6 +36,7 @@ function migrate(database: Database.Database) {
     'ALTER TABLE deals ADD COLUMN payment_terms_days INTEGER NOT NULL DEFAULT 15',
     'ALTER TABLE deals ADD COLUMN escalation_contact TEXT',
     'ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE users ADD COLUMN upi_id TEXT',
   ]) {
     try { database.exec(stmt); } catch { }
   }
@@ -49,7 +50,8 @@ function migrate(database: Database.Database) {
                     CHECK (plan IN ('free','creator','pro')),
       plan_expires_at INTEGER,
       session_version INTEGER NOT NULL DEFAULT 1,
-      created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+      created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+      upi_id        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS payments (
@@ -143,7 +145,7 @@ const DEAL_COLS = [
 
 export const driver: DbDriver = {
   async listUsers() {
-    return handle().prepare('SELECT id, name, email FROM users ORDER BY id').all() as never;
+    return handle().prepare('SELECT id, name, email, upi_id FROM users ORDER BY id').all() as never;
   },
 
   async listDeals(creatorId) {
@@ -210,13 +212,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     return handle()
-      .prepare('SELECT id, name, email, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ?')
+      .prepare('SELECT id, name, email, upi_id, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ?')
       .get(email.toLowerCase()) as never;
   },
 
   async findUserById(id) {
     return handle()
-      .prepare('SELECT id, name, email, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ?')
+      .prepare('SELECT id, name, email, upi_id, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ?')
       .get(id) as never;
   },
 
@@ -250,6 +252,10 @@ export const driver: DbDriver = {
 
   async grantPlan(userId, plan, planExpiresAt) {
     handle().prepare('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?').run(plan, planExpiresAt, userId);
+  },
+
+  async updateUpiId(userId, upiId) {
+    handle().prepare('UPDATE users SET upi_id = ? WHERE id = ?').run(upiId, userId);
   },
 
   async invalidateLiveResets(userId, usedAt) {

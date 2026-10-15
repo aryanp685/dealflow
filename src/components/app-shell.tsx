@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Dashboard from "@/components/dashboard";
 import DealsTable from "@/components/deals-table";
 import Reminders, { type Reminder } from "@/components/reminders";
+import UpiSettings from "@/components/upi-settings";
 import DealForm from "@/components/deal-form";
 import {
   Toast,
@@ -246,12 +247,16 @@ export default function AppShell({
             isLoading={dealsQuery.isLoading}
           />
         )}
-        {tab === "reminders" &&
-          (remindersQuery.isLoading ? (
-            <div className="empty">Loading follow-ups…</div>
-          ) : (
-            <Reminders reminders={reminders} urgent={urgent} notify={notify} />
-          ))}
+        {tab === "reminders" && (
+          <>
+            <UpiSettings notify={notify} />
+            {remindersQuery.isLoading ? (
+              <div className="empty">Loading follow-ups…</div>
+            ) : (
+              <Reminders reminders={reminders} urgent={urgent} notify={notify} />
+            )}
+          </>
+        )}
         {tab === "pricing" && <Pricing current={plan?.key ?? "free"} notify={notify} />}
       </m.main>
 

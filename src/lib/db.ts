@@ -105,6 +105,9 @@ export async function insertLicense(row: { license_key: string; user_id: number;
   return active.insertLicense(row);
 }
 
+export async function updateUpiId(userId: number, upiId: string | null) {
+  return active.updateUpiId(userId, upiId);
+}
 export async function resetDbHandle() {
   resetSqlite();
 }

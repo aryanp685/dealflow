@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   try {
     const user = await requireUser();
     const deals = await listDeals(user.id);
-    const reminders = buildReminders(deals);
+    const reminders = buildReminders(deals, new Date(), { upiId: user.upi_id ?? undefined, payeeName: user.name });
     const digest = reminderDigest(reminders);
 
     const { searchParams } = new URL(request.url);

@@ -3,6 +3,7 @@ create table if not exists users (
   id              integer generated always as identity primary key,
   name            text    not null,
   email           text    not null unique,
+  upi_id          text,
   password_hash   text    not null,
   plan            text    not null default 'free'
                   check (plan in ('free','creator','pro')),

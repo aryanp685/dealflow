@@ -811,3 +811,39 @@ test('demo: every sample deal computes money without throwing', () => {
     assert.ok(Number.isFinite(m.net_receivable));
   }
 });
+
+const { upiPayLink, UPI_ID_RE } = require('../test-build/reminders.js');
+
+const UPI_OPTS = { upiId: 'creator@okhdfc', payeeName: 'Test Creator' };
+
+test('upiPayLink builds a valid upi:// URL for INR deals', () => {
+  const link = upiPayLink({ upiId: 'creator@okhdfc', payeeName: 'Test Creator', amount: 18000, currency: 'INR', note: 'Invoice INV-001' });
+  assert.ok(link.startsWith('upi://pay?pa=creator@okhdfc'));
+  assert.match(link, /am=18000(\.00)?/);
+  assert.match(link, /cu=INR/);
+  assert.match(link, /pn=Test%20Creator/);
+  assert.match(link, /tn=Invoice%20INV-001/);
+});
+
+test('upiPayLink refuses non-INR, bad IDs, and non-positive amounts', () => {
+  assert.equal(upiPayLink({ upiId: 'creator@okhdfc', payeeName: '', amount: 100, currency: 'USD', note: '' }), null);
+  assert.equal(upiPayLink({ upiId: 'not-an-upi-id', payeeName: '', amount: 100, currency: 'INR', note: '' }), null);
+  assert.equal(upiPayLink({ upiId: 'creator@okhdfc', payeeName: '', amount: 0, currency: 'INR', note: '' }), null);
+  assert.equal(UPI_ID_RE.test('name@okhdfc'), true);
+  assert.equal(UPI_ID_RE.test('no-at-sign'), false);
+});
+
+test('payment reminders carry a UPI pay link when the creator set a UPI ID', () => {
+  const list = buildReminders([deal({ invoice_due_on: '2026-09-01' })], TODAY, UPI_OPTS);
+  const r = list.find((x) => x.kind === 'payment_overdue_2');
+  assert.ok(r, 'expected a payment_overdue_2 reminder');
+  assert.match(r.message, /upi:\/\/pay\?pa=creator@okhdfc/);
+  assert.match(r.message, /am=18000/);
+});
+
+test('reminders stay link-free without a UPI ID, and USD deals never get one', () => {
+  const plain = buildReminders([deal({ invoice_due_on: '2026-09-01' })], TODAY);
+  assert.ok(!plain.some((x) => x.message.includes('upi://pay')));
+  const usd = buildReminders([deal({ invoice_due_on: '2026-09-01', currency: 'USD', deal_value: 500, tds_pct: 0 })], TODAY, UPI_OPTS);
+  assert.ok(!usd.some((x) => x.message.includes('upi://pay')));
+});

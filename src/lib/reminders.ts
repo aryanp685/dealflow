@@ -50,7 +50,33 @@ function waNumber(raw: string | null | undefined): string | undefined {
   return digits;
 }
 
-export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
+export type ReminderOpts = { upiId?: string; payeeName?: string };
+
+export const UPI_ID_RE = /^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/;
+
+export type UpiLinkInput = {
+  upiId: string;
+  payeeName: string;
+  amount: number;
+  currency: string;
+  note: string;
+};
+
+export function upiPayLink(input: UpiLinkInput): string | null {
+  const id = input.upiId.trim();
+  if (!UPI_ID_RE.test(id)) return null;
+  if (input.currency !== 'INR') return null;
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return null;
+  const amount = String(Number(input.amount.toFixed(2)));
+  const params = [`pa=${id}`, `am=${amount}`, 'cu=INR'];
+  const name = input.payeeName.trim();
+  if (name) params.push(`pn=${encodeURIComponent(name)}`);
+  const note = input.note.trim().slice(0, 60);
+  if (note) params.push(`tn=${encodeURIComponent(note)}`);
+  return `upi://pay?${params.join('&')}`;
+}
+
+export function buildReminders(deals: Deal[], today = new Date(), opts: ReminderOpts = {}): Reminder[] {
   const out: Reminder[] = [];
 
   const history = new Map<string, { paid: number[]; late: number }>();
@@ -70,6 +96,17 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
     if (deal.status === 'cancelled' || deal.payment_status === 'cancelled') continue;
 
     const m = computeDealMoney(deal);
+    const paySuffix = (amount: number) => {
+      const link = upiPayLink({
+        upiId: opts.upiId ?? '',
+        payeeName: opts.payeeName ?? '',
+        amount,
+        currency: deal.currency,
+        note: deal.invoice_number ? `Invoice ${deal.invoice_number}` : `${deal.brand} \u2014 ${deal.title}`,
+      });
+      return link ? `\n\nPay instantly over UPI: ${link}` : '';
+    };
+    const netPaySuffix = paySuffix(m.net_receivable);
     const value = formatMoney(m.net_receivable, deal.currency);
     const invoiceValue = formatMoney(m.invoice_total, deal.currency);
     const tdsNote = deal.tds_pct > 0
@@ -156,7 +193,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
         ``,
         `Best,`,
         `You`,
-      ].join('\n');
+      ].join('\n') + netPaySuffix;
       out.push({
         deal_id: deal.id,
         brand: deal.brand,
@@ -188,7 +225,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
     ) {
       const sinceAgreed = Math.abs(daysUntil(deal.agreed_on, today) ?? 0);
       if (sinceAgreed >= 3) {
-        const send = `Hi ${contact}, gentle reminder on the ${deal.advance_pct}% advance (${formatMoney(m.advance_due, deal.currency)}) for ${deal.title} we agreed on ${formatDate(deal.agreed_on)}. Could you share the payment reference once processed? I'll pick production back up the same day it lands.`;
+        const send = `Hi ${contact}, gentle reminder on the ${deal.advance_pct}% advance (${formatMoney(m.advance_due, deal.currency)}) for ${deal.title} we agreed on ${formatDate(deal.agreed_on)}. Could you share the payment reference once processed? I'll pick production back up the same day it lands.` + paySuffix(m.advance_due);
         out.push({
           deal_id: deal.id,
           brand: deal.brand,
@@ -215,7 +252,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
       const dueIn = daysUntil(deal.invoice_due_on, today);
 
       if (days === 0 && dueIn !== null && dueIn <= 3) {
-        const send = `Hi ${contact}, just a heads-up that invoice ${deal.invoice_number || ''} (${invoiceValue}) is due ${formatDate(deal.invoice_due_on)} — as per our ${deal.payment_terms_days ?? 15}-day payment terms. Let me know if you need the invoice re-sent or any other details from my side.`;
+        const send = `Hi ${contact}, just a heads-up that invoice ${deal.invoice_number || ''} (${invoiceValue}) is due ${formatDate(deal.invoice_due_on)} — as per our ${deal.payment_terms_days ?? 15}-day payment terms. Let me know if you need the invoice re-sent or any other details from my side.` + netPaySuffix;
         out.push({
           deal_id: deal.id,
           brand: deal.brand,
@@ -237,7 +274,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
           ].join('\n'),
         });
       } else if (days >= 1 && days <= 15) {
-        const send = `Hi ${contact}, hope you're doing well. Invoice ${deal.invoice_number || ''} for ${invoiceValue} was due ${formatDate(deal.invoice_due_on)} — could you check on the status with your accounts team? Happy to re-share the invoice or any details if that helps.`;
+        const send = `Hi ${contact}, hope you're doing well. Invoice ${deal.invoice_number || ''} for ${invoiceValue} was due ${formatDate(deal.invoice_due_on)} — could you check on the status with your accounts team? Happy to re-share the invoice or any details if that helps.` + netPaySuffix;
         out.push({
           deal_id: deal.id,
           brand: deal.brand,
@@ -266,7 +303,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
           ``,
           `Thanks,`,
           `You`,
-        ].join('\n');
+        ].join('\n') + netPaySuffix;
         out.push({
           deal_id: deal.id,
           brand: deal.brand,
@@ -305,7 +342,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
           ``,
           `Regards,`,
           `You`,
-        ].join('\n');
+        ].join('\n') + paySuffix(si.total_due);
         out.push({
           deal_id: deal.id,
           brand: deal.brand,
@@ -342,7 +379,7 @@ export function buildReminders(deals: Deal[], today = new Date()): Reminder[] {
           ``,
           `Regards,`,
           `You`,
-        ].join('\n');
+        ].join('\n') + paySuffix(si.total_due);
         out.push({
           deal_id: deal.id,
           brand: deal.brand,

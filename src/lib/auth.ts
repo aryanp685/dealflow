@@ -12,6 +12,7 @@ export type User = {
   id: number;
   name: string;
   email: string;
+  upi_id: string | null;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;

@@ -4,6 +4,7 @@ export type User = {
   id: number;
   name: string;
   email: string;
+  upi_id: string | null;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;
@@ -57,7 +58,7 @@ export type Deal = {
 };
 
 export interface DbDriver {
-  listUsers(): Promise<{ id: number; name: string; email: string }[]>;
+  listUsers(): Promise<{ id: number; name: string; email: string; upi_id: string | null }[]>;
   listDeals(creatorId: number): Promise<Deal[]>;
   getDeal(creatorId: number, dealId: number): Promise<Deal | undefined>;
   insertDeal(creatorId: number, fields: Record<string, unknown>): Promise<Deal>;
@@ -73,6 +74,7 @@ export interface DbDriver {
   bumpSessionVersion(userId: number): Promise<void>;
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
   grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
+  updateUpiId(userId: number, upiId: string | null): Promise<void>;
   countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;
