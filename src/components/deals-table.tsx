@@ -248,6 +248,17 @@ export default function DealsTable({
                               </button>
                             )}
                             <button className="btn sm" onClick={() => onEdit(d)}>Edit</button>
+                            {(d.invoice_number || ['invoiced', 'overdue', 'paid', 'advance_paid'].includes(d.payment_status)) && (
+                              <a
+                                className="btn sm"
+                                href={`/invoice/${d.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Open printable invoice — save as PDF"
+                              >
+                                🧾
+                              </a>
+                            )}
                             <button className="btn sm danger" onClick={() => askDelete(d)} aria-label={`Delete ${d.brand} deal`}>✕</button>
                           </div>
                         </td>
