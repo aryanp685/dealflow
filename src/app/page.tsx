@@ -204,6 +204,7 @@ export default function LandingPage() {
             <Reveal delay={0.06}><ToolLink href="/tools/tds-calculator" icon="🧮" title="TDS Calculator for Creators" body="194J, 194H, 194O — what actually lands in your account after GST and TDS." /></Reveal>
             <Reveal delay={0.12}><ToolLink href="/tools/gst-invoice-generator" icon="🧾" title="GST Invoice Generator" body="A clean, print-ready GST invoice. No account needed." /></Reveal>
             <Reveal delay={0.18}><ToolLink href="/tools/brand-deal-rate-calculator" icon="📈" title="Brand Deal Rate Calculator" body="Followers and views in, a defensible quote out — with the formula shown." /></Reveal>
+            <Reveal delay={0.24}><ToolLink href="/tools/collab-agreement-generator" icon="📝" title="Collab Agreement Generator" body="Fee, advance, usage rights, exclusivity — a short-form agreement in 60 seconds." /></Reveal>
           </div>
         </section>
 
