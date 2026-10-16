@@ -16,6 +16,7 @@ export type Reminder = {
   wa_number?: string;
   money?: string;
   date?: string;
+  auto_sent_on?: string | null;
 };
 
 export default function Reminders({
@@ -71,7 +72,7 @@ export default function Reminders({
                   {r.brand} <span className="dim">—</span> {r.headline}
                 </div>
                 <div className="reminder-meta">
-                  {r.channel === 'whatsapp' ? '💬 WhatsApp' : '✉️ Email'}
+                  {r.channel === 'whatsapp' ? '💬 WhatsApp' : '✉️ Email'}{r.auto_sent_on ? ` · ✈️ auto-sent ${formatDate(r.auto_sent_on)}` : ''}
                   {r.money && <span> · {r.money}</span>}
                   {r.date && <span> · {formatDate(r.date)}</span>}
                 </div>

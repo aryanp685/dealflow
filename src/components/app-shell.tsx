@@ -8,6 +8,7 @@ import DealsTable from "@/components/deals-table";
 import Reminders, { type Reminder } from "@/components/reminders";
 import UpiSettings from "@/components/upi-settings";
 import TaxReport from "@/components/tax-report";
+import AutoFollowups from "@/components/auto-followups";
 import DealForm from "@/components/deal-form";
 import {
   Toast,
@@ -252,6 +253,7 @@ export default function AppShell({
         {tab === "reminders" && (
           <>
             <UpiSettings notify={notify} />
+            <AutoFollowups notify={notify} />
             {remindersQuery.isLoading ? (
               <div className="empty">Loading follow-ups…</div>
             ) : (

@@ -903,3 +903,21 @@ test('buildCaReport blends USD rows at the fixed rate', () => {
   const s2 = r.summary.find((x) => x.quarter === 'Q2');
   assert.equal(s2.net, 1000 * lib.USD_INR);
 });
+
+const { AUTO_EMAIL_KINDS, autoSendKey, selectAutoFollowups } = require('../test-build/reminders.js');
+
+test('auto follow-ups pick only gentle email-safe kinds, skipping already-sent', () => {
+  const mk = (deal_id, kind) => ({ deal_id, kind });
+  const all = ['advance_not_received', 'payment_due_soon', 'payment_overdue_1', 'payment_overdue_2', 'payment_overdue_final', 'payment_overdue_samadhaan', 'invoice_not_sent', 'delivery_upcoming'].map((k) => mk(1, k));
+  assert.deepEqual(
+    selectAutoFollowups(all, new Set()).map((r) => r.kind),
+    ['advance_not_received', 'payment_due_soon', 'payment_overdue_1', 'payment_overdue_2']
+  );
+  assert.deepEqual(
+    selectAutoFollowups(all, new Set(['1:payment_due_soon'])).map((r) => r.kind),
+    ['advance_not_received', 'payment_overdue_1', 'payment_overdue_2']
+  );
+  assert.equal(autoSendKey(7, 'payment_overdue_1'), '7:payment_overdue_1');
+  assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_final'));
+  assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_samadhaan'));
+});

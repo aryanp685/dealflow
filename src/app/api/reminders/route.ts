@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { listDeals } from '@/lib/db';
-import { buildReminders, reminderDigest } from '@/lib/reminders';
+import { listAutoSends, listDeals } from '@/lib/db';
+import { autoSendKey, buildReminders, reminderDigest } from '@/lib/reminders';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +10,12 @@ export async function GET(request: Request) {
     const user = await requireUser();
     const deals = await listDeals(user.id);
     const reminders = buildReminders(deals, new Date(), { upiId: user.upi_id ?? undefined, payeeName: user.name });
+    const sentRows = await listAutoSends(user.id);
+    const sentOn = new Map(sentRows.map((row) => [autoSendKey(row.deal_id, row.kind), row.sent_on]));
+    const withState = reminders.map((r) => ({
+      ...r,
+      auto_sent_on: sentOn.get(autoSendKey(r.deal_id, r.kind)) ?? null,
+    }));
     const digest = reminderDigest(reminders);
 
     const { searchParams } = new URL(request.url);
@@ -18,10 +24,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      reminders,
+      reminders: withState,
       digest,
       count: reminders.length,
-      urgent: reminders.filter((r) => r.urgency === 3).length,
+      urgent: withState.filter((r) => r.urgency === 3).length,
     });
   } catch (err) {
     if (err instanceof UnauthorizedError) return NextResponse.json({ error: err.message }, { status: 401 });

@@ -108,6 +108,21 @@ export async function insertLicense(row: { license_key: string; user_id: number;
 export async function updateUpiId(userId: number, upiId: string | null) {
   return active.updateUpiId(userId, upiId);
 }
+export async function updateAutoFollowups(userId: number, on: boolean) {
+  return active.updateAutoFollowups(userId, on);
+}
+export async function listAutoFollowupUsers() {
+  return active.listAutoFollowupUsers();
+}
+export async function hasAutoSend(creatorId: number, dealId: number, kind: string) {
+  return active.hasAutoSend(creatorId, dealId, kind);
+}
+export async function logAutoSend(creatorId: number, dealId: number, kind: string, sentOn: string) {
+  return active.logAutoSend(creatorId, dealId, kind, sentOn);
+}
+export async function listAutoSends(creatorId: number) {
+  return active.listAutoSends(creatorId);
+}
 export async function resetDbHandle() {
   resetSqlite();
 }

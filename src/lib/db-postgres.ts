@@ -84,13 +84,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     const rows =
-      await sql()`SELECT id, name, email, upi_id, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ${email.toLowerCase()}`;
+      await sql()`SELECT id, name, email, upi_id, auto_followups, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ${email.toLowerCase()}`;
     return rows[0] as never;
   },
 
   async findUserById(id) {
     const rows =
-      await sql()`SELECT id, name, email, upi_id, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ${id}`;
+      await sql()`SELECT id, name, email, upi_id, auto_followups, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ${id}`;
     return rows[0] as never;
   },
 
@@ -126,6 +126,24 @@ export const driver: DbDriver = {
 
   async updateUpiId(userId, upiId) {
     await sql()`UPDATE users SET upi_id = ${upiId} WHERE id = ${userId}`;
+  },
+  async updateAutoFollowups(userId, on) {
+    await sql()`UPDATE users SET auto_followups = ${on ? 1 : 0} WHERE id = ${userId}`;
+  },
+  async listAutoFollowupUsers() {
+    const rows = await sql()`SELECT id, name, email, upi_id FROM users WHERE auto_followups = 1 ORDER BY id`;
+    return rows as never;
+  },
+  async hasAutoSend(creatorId, dealId, kind) {
+    const rows = await sql()`SELECT 1 AS one FROM auto_sends WHERE creator_id = ${creatorId} AND deal_id = ${dealId} AND kind = ${kind} LIMIT 1`;
+    return rows.length > 0;
+  },
+  async logAutoSend(creatorId, dealId, kind, sentOn) {
+    await sql()`INSERT INTO auto_sends (creator_id, deal_id, kind, sent_on) VALUES (${creatorId}, ${dealId}, ${kind}, ${sentOn}) ON CONFLICT (creator_id, deal_id, kind) DO NOTHING`;
+  },
+  async listAutoSends(creatorId) {
+    const rows = await sql()`SELECT deal_id, kind, sent_on FROM auto_sends WHERE creator_id = ${creatorId}`;
+    return rows as never;
   },
 
   async invalidateLiveResets(userId, usedAt) {
@@ -192,6 +210,8 @@ async function migrate(): Promise<void> {
   const stmts = [
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 1',
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id TEXT',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_followups INTEGER NOT NULL DEFAULT 0',
+    'CREATE TABLE IF NOT EXISTS auto_sends (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE, kind TEXT NOT NULL, sent_on TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (creator_id, deal_id, kind))',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER NOT NULL DEFAULT 15',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS escalation_contact TEXT',
     'ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT \'razorpay\'',

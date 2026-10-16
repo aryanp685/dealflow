@@ -76,6 +76,26 @@ export function upiPayLink(input: UpiLinkInput): string | null {
   return `upi://pay?${params.join('&')}`;
 }
 
+/** Kinds gentle enough to auto-email a brand. Final notice + Samadhaan
+ *  legal threats, creator-facing nudges and WhatsApp-only items are
+ *  NEVER auto-sent — those always need human eyes. */
+export const AUTO_EMAIL_KINDS: ReminderKind[] = [
+  'advance_not_received',
+  'payment_due_soon',
+  'payment_overdue_1',
+  'payment_overdue_2',
+];
+
+const AUTO_EMAIL_SET: ReadonlySet<ReminderKind> = new Set(AUTO_EMAIL_KINDS);
+
+export function autoSendKey(dealId: number, kind: string): string {
+  return `${dealId}:${kind}`;
+}
+
+export function selectAutoFollowups(reminders: Reminder[], sent: Set<string>): Reminder[] {
+  return reminders.filter((r) => AUTO_EMAIL_SET.has(r.kind) && !sent.has(autoSendKey(r.deal_id, r.kind)));
+}
+
 export function buildReminders(deals: Deal[], today = new Date(), opts: ReminderOpts = {}): Reminder[] {
   const out: Reminder[] = [];
 

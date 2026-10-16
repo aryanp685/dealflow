@@ -1,21 +1,29 @@
 import { NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { updateUpiId } from '@/lib/db';
+import { updateAutoFollowups, updateUpiId } from '@/lib/db';
 import { UPI_ID_RE } from '@/lib/reminders';
 
 export const dynamic = 'force-dynamic';
 
 const schema = z
-  .object({ upi_id: z.string().trim().max(100) })
-  .refine((d) => d.upi_id === '' || UPI_ID_RE.test(d.upi_id), {
+  .object({
+    upi_id: z.string().trim().max(100).optional(),
+    auto_followups: z.boolean().optional(),
+  })
+  .refine((d) => d.upi_id === undefined || d.upi_id === '' || UPI_ID_RE.test(d.upi_id), {
     message: 'That UPI ID does not look valid — use the format name@bank',
   });
 
 export async function GET() {
   try {
     const user = await requireUser();
-    return NextResponse.json({ upi_id: user.upi_id ?? null, name: user.name, email: user.email });
+    return NextResponse.json({
+      upi_id: user.upi_id ?? null,
+      auto_followups: user.auto_followups ?? 0,
+      name: user.name,
+      email: user.email,
+    });
   } catch (err) {
     if (err instanceof UnauthorizedError) return NextResponse.json({ error: err.message }, { status: 401 });
     console.error('[profile]', err);
@@ -28,10 +36,14 @@ export async function PUT(request: Request) {
     const user = await requireUser();
     const body = await request.json().catch(() => null);
     if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    const { upi_id } = schema.parse(body);
-    const value = upi_id === '' ? null : upi_id;
-    await updateUpiId(user.id, value);
-    return NextResponse.json({ upi_id: value });
+    const parsed = schema.parse(body);
+    if (parsed.upi_id !== undefined) {
+      await updateUpiId(user.id, parsed.upi_id === '' ? null : parsed.upi_id);
+    }
+    if (parsed.auto_followups !== undefined) {
+      await updateAutoFollowups(user.id, parsed.auto_followups);
+    }
+    return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof UnauthorizedError) return NextResponse.json({ error: err.message }, { status: 401 });
     if (err instanceof ZodError) {

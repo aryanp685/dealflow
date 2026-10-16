@@ -5,6 +5,7 @@ export type User = {
   name: string;
   email: string;
   upi_id: string | null;
+  auto_followups: number;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;
@@ -75,6 +76,11 @@ export interface DbDriver {
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
   grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
   updateUpiId(userId: number, upiId: string | null): Promise<void>;
+  updateAutoFollowups(userId: number, on: boolean): Promise<void>;
+  listAutoFollowupUsers(): Promise<{ id: number; name: string; email: string; upi_id: string | null }[]>;
+  hasAutoSend(creatorId: number, dealId: number, kind: string): Promise<boolean>;
+  logAutoSend(creatorId: number, dealId: number, kind: string, sentOn: string): Promise<void>;
+  listAutoSends(creatorId: number): Promise<{ deal_id: number; kind: string; sent_on: string }[]>;
   countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;

@@ -4,6 +4,7 @@ create table if not exists users (
   name            text    not null,
   email           text    not null unique,
   upi_id          text,
+  auto_followups  integer not null default 0,
   password_hash   text    not null,
   plan            text    not null default 'free'
                   check (plan in ('free','creator','pro')),
@@ -102,3 +103,13 @@ alter table payments       enable row level security;
 alter table deals          enable row level security;
 alter table password_resets enable row level security;
 alter table licenses       enable row level security;
+
+create table if not exists auto_sends (
+  id              integer generated always as identity primary key,
+  creator_id      integer not null references users (id) on delete cascade,
+  deal_id         integer not null references deals (id) on delete cascade,
+  kind            text    not null,
+  sent_on         text    not null,
+  created_at      timestamptz not null default now(),
+  unique (creator_id, deal_id, kind)
+);

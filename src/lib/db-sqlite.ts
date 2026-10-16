@@ -37,6 +37,8 @@ function migrate(database: Database.Database) {
     'ALTER TABLE deals ADD COLUMN escalation_contact TEXT',
     'ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1',
     'ALTER TABLE users ADD COLUMN upi_id TEXT',
+    'ALTER TABLE users ADD COLUMN auto_followups INTEGER NOT NULL DEFAULT 0',
+    'CREATE TABLE IF NOT EXISTS auto_sends (id INTEGER PRIMARY KEY AUTOINCREMENT, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE, kind TEXT NOT NULL, sent_on TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime(\'now\')), UNIQUE (creator_id, deal_id, kind))',
   ]) {
     try { database.exec(stmt); } catch { }
   }
@@ -51,7 +53,8 @@ function migrate(database: Database.Database) {
       plan_expires_at INTEGER,
       session_version INTEGER NOT NULL DEFAULT 1,
       created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-      upi_id        TEXT
+      upi_id        TEXT,
+      auto_followups INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS payments (
@@ -212,13 +215,13 @@ export const driver: DbDriver = {
 
   async findUserByEmail(email) {
     return handle()
-      .prepare('SELECT id, name, email, upi_id, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ?')
+      .prepare('SELECT id, name, email, upi_id, auto_followups, password_hash, plan, plan_expires_at, session_version, created_at FROM users WHERE email = ?')
       .get(email.toLowerCase()) as never;
   },
 
   async findUserById(id) {
     return handle()
-      .prepare('SELECT id, name, email, upi_id, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ?')
+      .prepare('SELECT id, name, email, upi_id, auto_followups, plan, plan_expires_at, session_version, created_at FROM users WHERE id = ?')
       .get(id) as never;
   },
 
@@ -256,6 +259,22 @@ export const driver: DbDriver = {
 
   async updateUpiId(userId, upiId) {
     handle().prepare('UPDATE users SET upi_id = ? WHERE id = ?').run(upiId, userId);
+  },
+  async updateAutoFollowups(userId, on) {
+    handle().prepare('UPDATE users SET auto_followups = ? WHERE id = ?').run(on ? 1 : 0, userId);
+  },
+  async listAutoFollowupUsers() {
+    return handle().prepare('SELECT id, name, email, upi_id FROM users WHERE auto_followups = 1 ORDER BY id').all() as never;
+  },
+  async hasAutoSend(creatorId, dealId, kind) {
+    const row = handle().prepare('SELECT 1 AS one FROM auto_sends WHERE creator_id = ? AND deal_id = ? AND kind = ?').get(creatorId, dealId, kind) as { one: number } | undefined;
+    return !!row;
+  },
+  async logAutoSend(creatorId, dealId, kind, sentOn) {
+    handle().prepare('INSERT OR IGNORE INTO auto_sends (creator_id, deal_id, kind, sent_on) VALUES (?, ?, ?, ?)').run(creatorId, dealId, kind, sentOn);
+  },
+  async listAutoSends(creatorId) {
+    return handle().prepare('SELECT deal_id, kind, sent_on FROM auto_sends WHERE creator_id = ?').all(creatorId) as never;
   },
 
   async invalidateLiveResets(userId, usedAt) {

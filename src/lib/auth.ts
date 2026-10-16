@@ -13,6 +13,7 @@ export type User = {
   name: string;
   email: string;
   upi_id: string | null;
+  auto_followups: number;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;
