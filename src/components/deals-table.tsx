@@ -5,6 +5,7 @@ import { m, AnimatePresence } from 'motion/react';
 import { useMutation } from '@tanstack/react-query';
 import { Pill, EmptyState, listItem, staggerParent } from './ui';
 import { computeDealMoney, formatMoney, formatDate, daysUntil, todayISO } from '@/lib/money';
+import { msmeInterest } from '@/lib/msme';
 import type { Deal } from '@/lib/db';
 import type { DealStatus, PaymentStatus } from '@/lib/schemas';
 
@@ -249,6 +250,11 @@ const RETAINER_TAG_RE = / \u00b7 [A-Z][a-z]{2} \d{4}$/;
                           {overdue && (
                             <div style={{ marginTop: 5 }}>
                               <Pill tone="red">{Math.abs(daysUntil(d.invoice_due_on) ?? 0)}d overdue</Pill>
+                            </div>
+                          )}
+                          {overdue && d.currency === 'INR' && (
+                            <div className="t-muted dim" style={{ marginTop: 3 }}>
+                              +{formatMoney(msmeInterest(cash.net_receivable, Math.abs(daysUntil(d.invoice_due_on) ?? 0)).interest)} MSME interest
                             </div>
                           )}
                         </td>
