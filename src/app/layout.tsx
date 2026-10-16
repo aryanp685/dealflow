@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Providers from '@/components/providers';
+import SwRegister from '@/components/sw-register';
 import { faqs, offers } from '@/lib/content';
 import './globals.css';
 
@@ -36,6 +37,14 @@ export const metadata: Metadata = {
   title: { default: title, template: '%s — DealFlow' },
   description,
   applicationName: 'DealFlow',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   alternates: { canonical: '/' },
   keywords: [
     'brand deal tracker',
@@ -78,6 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <SwRegister />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
