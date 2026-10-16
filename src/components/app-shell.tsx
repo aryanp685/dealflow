@@ -7,6 +7,7 @@ import Dashboard from "@/components/dashboard";
 import DealsTable from "@/components/deals-table";
 import Reminders, { type Reminder } from "@/components/reminders";
 import UpiSettings from "@/components/upi-settings";
+import TaxReport from "@/components/tax-report";
 import DealForm from "@/components/deal-form";
 import {
   Toast,
@@ -21,7 +22,7 @@ import { LIFETIME_PRICE, PLANS, type PlanKey } from "@/lib/schemas";
 import Logo from "@/components/logo";
 import type { Deal } from "@/lib/db";
 
-type Tab = "overview" | "deals" | "reminders" | "pricing";
+type Tab = "overview" | "deals" | "reminders" | "tax" | "pricing";
 
 export default function AppShell({
   userName,
@@ -167,6 +168,7 @@ export default function AppShell({
             ["overview", "Overview"],
             ["deals", `Deals${deals.length ? ` · ${deals.length}` : ""}`],
             ["reminders", "Follow-ups"],
+            ["tax", "Tax report"],
             ["pricing", "Pricing"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -256,6 +258,9 @@ export default function AppShell({
               <Reminders reminders={reminders} urgent={urgent} notify={notify} />
             )}
           </>
+        )}
+        {tab === "tax" && (
+          <TaxReport deals={deals} planKey={plan?.key ?? "free"} onUpgrade={() => setTab("pricing")} />
         )}
         {tab === "pricing" && <Pricing current={plan?.key ?? "free"} notify={notify} />}
       </m.main>

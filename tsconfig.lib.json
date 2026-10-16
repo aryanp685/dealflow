@@ -11,5 +11,5 @@
     "declaration": false,
     "types": ["node"]
   },
-  "files": ["src/lib/money.ts", "src/lib/msme.ts", "src/lib/schemas.ts", "src/lib/db-types.ts", "src/lib/db.ts", "src/lib/db-sqlite.ts", "src/lib/db-postgres.ts", "src/lib/reminders.ts", "src/lib/rate-limit.ts", "src/lib/payhip.ts", "src/lib/demo.ts"]
+  "files": ["src/lib/money.ts", "src/lib/msme.ts", "src/lib/schemas.ts", "src/lib/db-types.ts", "src/lib/db.ts", "src/lib/db-sqlite.ts", "src/lib/db-postgres.ts", "src/lib/reminders.ts", "src/lib/tax-report.ts", "src/lib/rate-limit.ts", "src/lib/payhip.ts", "src/lib/demo.ts"]
 }

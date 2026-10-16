@@ -847,3 +847,59 @@ test('reminders stay link-free without a UPI ID, and USD deals never get one', (
   const usd = buildReminders([deal({ invoice_due_on: '2026-09-01', currency: 'USD', deal_value: 500, tds_pct: 0 })], TODAY, UPI_OPTS);
   assert.ok(!usd.some((x) => x.message.includes('upi://pay')));
 });
+
+const { fyOf, quarterOf, currentFy, buildCaReport } = require('../test-build/tax-report.js');
+
+test('fyOf splits the year at April', () => {
+  assert.equal(fyOf('2025-03-31'), 2024);
+  assert.equal(fyOf('2025-04-01'), 2025);
+  assert.equal(fyOf('2026-01-15'), 2025);
+  assert.equal(fyOf('not-a-date'), null);
+});
+
+test('quarterOf maps months to FY quarters', () => {
+  assert.equal(quarterOf('2025-04-01'), 'Q1');
+  assert.equal(quarterOf('2025-06-30'), 'Q1');
+  assert.equal(quarterOf('2025-09-30'), 'Q2');
+  assert.equal(quarterOf('2025-12-31'), 'Q3');
+  assert.equal(quarterOf('2026-03-31'), 'Q4');
+  assert.equal(quarterOf('2026-01-01'), 'Q4');
+});
+
+test('currentFy follows the April boundary', () => {
+  assert.equal(currentFy(new Date('2026-03-31T12:00:00')), 2025);
+  assert.equal(currentFy(new Date('2026-04-01T12:00:00')), 2026);
+});
+
+test('buildCaReport buckets by invoice date and sums quarters in INR', () => {
+  const q1 = deal({ invoice_number: 'INV-101', invoice_sent_on: '2025-05-10', deal_value: 10000, tds_pct: 10, gst_applicable: 0 });
+  const q4 = deal({ invoice_number: 'INV-102', invoice_sent_on: '2026-02-10', deal_value: 20000, tds_pct: 10, gst_applicable: 1 });
+  const otherFy = deal({ invoice_number: 'INV-999', invoice_sent_on: '2024-05-10' });
+  const noInvoice = deal({ invoice_number: null, invoice_sent_on: null });
+  const cancelled = deal({ invoice_number: 'INV-XX', invoice_sent_on: '2025-05-10', status: 'cancelled', payment_status: 'cancelled' });
+  const r = buildCaReport([q1, q4, otherFy, noInvoice, cancelled], 2025);
+  assert.equal(r.rows.length, 2);
+  assert.equal(r.excluded, 2);
+  assert.deepEqual(r.rows.map((x) => x.quarter), ['Q1', 'Q4']);
+  const s1 = r.summary.find((x) => x.quarter === 'Q1');
+  assert.equal(s1.invoices, 1);
+  assert.equal(s1.taxable, 10000);
+  assert.equal(s1.tds, 1000);
+  assert.equal(s1.net, 9000);
+  const s4 = r.summary.find((x) => x.quarter === 'Q4');
+  assert.equal(s4.invoices, 1);
+  assert.equal(s4.taxable, 20000);
+  assert.equal(s4.gst, 3600);
+  assert.equal(s4.tds, 2000);
+  assert.equal(s4.net, 21600);
+});
+
+test('buildCaReport blends USD rows at the fixed rate', () => {
+  const usd = deal({ invoice_number: 'INV-US', invoice_sent_on: '2025-08-01', currency: 'USD', deal_value: 1000, tds_pct: 0, gst_applicable: 0 });
+  const r = buildCaReport([usd], 2025);
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.rows[0].quarter, 'Q2');
+  assert.equal(r.rows[0].net, 1000);
+  const s2 = r.summary.find((x) => x.quarter === 'Q2');
+  assert.equal(s2.net, 1000 * lib.USD_INR);
+});
