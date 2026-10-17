@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     'What should you charge for a reel, story or YouTube integration? Free rate calculator for Indian creators — with engagement multipliers, exclusivity and usage-rights pricing, and the full formula shown.',
   keywords: ['brand deal rate calculator', 'how much to charge for a reel', 'influencer pricing India', 'sponsored post rates', 'creator rate card'],
   alternates: { canonical: '/tools/brand-deal-rate-calculator' },
+  openGraph: {
+    title: 'Brand Deal Rate Calculator for Indian Creators',
+    description: 'What should you charge for a reel, story or YouTube integration? Free rate calculator for Indian creators — with engagement multipliers, exclusivity and usage-rights pricing, and the full formula shown.',
+    url: '/tools/brand-deal-rate-calculator',
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+    images: ['/og-rate-calc.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Brand Deal Rate Calculator for Indian Creators',
+    description: 'What should you charge for a reel, story or YouTube integration? Free rate calculator for Indian creators — with engagement multipliers, exclusivity and usage-rights pricing, and the full formula shown.',
+    images: ['/og-rate-calc.png'],
+  },
 };
 
 const faqs = [

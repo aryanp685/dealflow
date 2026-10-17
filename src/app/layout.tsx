@@ -61,11 +61,13 @@ export const metadata: Metadata = {
     siteName: 'DealFlow',
     type: 'website',
     locale: 'en_IN',
+    images: ['/og-home.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
+    images: ['/og-home.png'],
   },
   robots: {
     index: true,

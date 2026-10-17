@@ -12,8 +12,18 @@ export default function ToolShell({
   children: React.ReactNode;
   faqs: { q: string; a: string }[];
 }) {
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
   return (
     <div className="landing tool-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <header className="land-nav no-print">
         <Link href="/" className="brand">
           <Logo size={30} />
