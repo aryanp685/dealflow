@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { m } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Dashboard from "@/components/dashboard";
@@ -24,6 +24,7 @@ import { formatMoney } from "@/lib/money";
 import { LIFETIME_PRICE, PLANS, type PlanKey } from "@/lib/schemas";
 import Logo from "@/components/logo";
 import type { Deal } from "@/lib/db";
+import LifetimeSpots from "@/components/lifetime-spots";
 
 type Tab = "overview" | "deals" | "reminders" | "tax" | "team" | "pricing";
 
@@ -35,6 +36,17 @@ export default function AppShell({
   plan: string;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
+  const [deepLink, setDeepLink] = useState<{ plan: string | null; billing: string | null }>({ plan: null, billing: null });
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get("tab");
+    if (t === "overview" || t === "deals" || t === "reminders" || t === "tax" || t === "team" || t === "pricing") {
+      setTab(t);
+    }
+    const plan = q.get("plan");
+    const billing = q.get("billing");
+    if (plan || billing) setDeepLink({ plan, billing });
+  }, []);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Deal | null>(null);
   const { toast, notify } = useToast();
@@ -266,11 +278,11 @@ export default function AppShell({
             )}
           </>
         )}
-        {tab === "team" && <ManagerTeam notify={notify} />}
+        {tab === "team" && <ManagerTeam notify={notify} planKey={plan?.key ?? "free"} />}
         {tab === "tax" && (
           <TaxReport deals={deals} planKey={plan?.key ?? "free"} onUpgrade={() => setTab("pricing")} />
         )}
-        {tab === "pricing" && <Pricing current={plan?.key ?? "free"} notify={notify} />}
+        {tab === "pricing" && <Pricing current={plan?.key ?? "free"} notify={notify} initialBilling={deepLink.billing} highlight={deepLink.billing === "lifetime" ? "lifetime" : deepLink.plan} />}
       </m.main>
 
       <DealForm
@@ -381,6 +393,7 @@ const TIERS: Tier[] = [
       "Invoice ageing + GST/TDS split",
       "UPI payment links",
       "CSV export for your CA + Zoho-ready invoice export",
+      "Invoice PDFs + auto email follow-ups",
     ],
   },
   {
@@ -505,12 +518,18 @@ function LicenseRedeem({
 function Pricing({
   current,
   notify,
+  initialBilling,
+  highlight,
 }: {
   current: string;
   notify: (msg: string, tone?: "ok" | "err") => void;
+  initialBilling?: string | null;
+  highlight?: string | null;
 }) {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
-  const [billing, setBilling] = useState<Billing>("yearly");
+  const [billing, setBilling] = useState<Billing>(
+    initialBilling === "monthly" || initialBilling === "quarterly" ? initialBilling : "yearly"
+  );
   const checkout = useMutation({
     mutationFn: async ({
       tier,
@@ -541,6 +560,11 @@ function Pricing({
     currency === "INR" ? formatMoney(LIFETIME_PRICE.INR) : `$${LIFETIME_PRICE.USD}`;
 
   const sym = currency === "INR" ? "₹" : "$";
+
+  useEffect(() => {
+    if (!highlight) return;
+    document.getElementById(`tier-${highlight}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlight]);
 
   return (
     <m.div variants={staggerParent} initial="initial" animate="animate">
@@ -603,6 +627,8 @@ function Pricing({
           return (
             <m.div
               className={`card pricing-card ${t.popular ? "popular" : ""}`}
+              id={`tier-${t.key}`}
+              style={highlight === t.key ? { borderColor: "var(--accent)", boxShadow: "0 0 0 2px var(--accent-soft)" } : undefined}
               key={t.key}
               variants={listItem}
               whileHover={{
@@ -659,11 +685,16 @@ function Pricing({
         })}
       </div>
 
-      <m.div className="card" variants={listItem}>
+      <m.div
+        className="card"
+        variants={listItem}
+        id="tier-lifetime"
+        style={highlight === "lifetime" ? { borderColor: "var(--accent)", boxShadow: "0 0 0 2px var(--accent-soft)" } : undefined}
+      >
         <h3 className="card-title">Lifetime deal — launch only</h3>
         <p className="card-sub">
           <strong>{lifetimeLabel} one-time.</strong> Pro, forever — no renewals,
-          no expiry. Only 50 spots, then it&apos;s gone for good.
+          no expiry. <LifetimeSpots />
         </p>
         <button
           className="btn primary btn-block"
