@@ -921,3 +921,26 @@ test('auto follow-ups pick only gentle email-safe kinds, skipping already-sent',
   assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_final'));
   assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_samadhaan'));
 });
+
+const { generatePairCode, hashPairCode, isValidPairCodeFormat, canLink } = require('../test-build/manager.js');
+
+test('pair codes are short, unambiguous and hash stably', () => {
+  for (let i = 0; i < 20; i++) {
+    const c = generatePairCode();
+    assert.equal(c.length, 6);
+    assert.ok(isValidPairCodeFormat(c));
+    assert.ok(!/[01ILO]/.test(c), 'no ambiguous characters');
+  }
+  assert.equal(hashPairCode('ABC123'), hashPairCode(' abc123 '));
+  assert.equal(hashPairCode('ABC123').length, 64);
+  assert.ok(!isValidPairCodeFormat('ABC12'));
+  assert.ok(!isValidPairCodeFormat('ABC1234'));
+  assert.ok(!isValidPairCodeFormat('ABC-23'));
+});
+
+test('manager links require two distinct positive user ids', () => {
+  assert.equal(canLink(1, 2), true);
+  assert.equal(canLink(2, 2), false);
+  assert.equal(canLink(0, 2), false);
+  assert.equal(canLink(1.5, 2), false);
+});

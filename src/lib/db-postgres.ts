@@ -145,6 +145,34 @@ export const driver: DbDriver = {
     const rows = await sql()`SELECT deal_id, kind, sent_on FROM auto_sends WHERE creator_id = ${creatorId}`;
     return rows as never;
   },
+  async createManagerCode(codeHash, creatorId, expiresAt) {
+    await sql()`DELETE FROM manager_codes WHERE creator_id = ${creatorId}`;
+    await sql()`INSERT INTO manager_codes (code_hash, creator_id, expires_at) VALUES (${codeHash}, ${creatorId}, ${expiresAt}) ON CONFLICT (code_hash) DO UPDATE SET creator_id = ${creatorId}, expires_at = ${expiresAt}`;
+  },
+  async redeemManagerCode(codeHash, now) {
+    const rows = await sql()`SELECT creator_id FROM manager_codes WHERE code_hash = ${codeHash} AND expires_at > ${now}`;
+    if (rows.length === 0) return undefined;
+    await sql()`DELETE FROM manager_codes WHERE code_hash = ${codeHash}`;
+    return rows[0] as unknown as { creator_id: number };
+  },
+  async createManagerLink(managerId, creatorId) {
+    await sql()`INSERT INTO manager_links (manager_id, creator_id) VALUES (${managerId}, ${creatorId}) ON CONFLICT DO NOTHING`;
+  },
+  async deleteManagerLink(managerId, creatorId) {
+    await sql()`DELETE FROM manager_links WHERE manager_id = ${managerId} AND creator_id = ${creatorId}`;
+  },
+  async hasManagerLink(managerId, creatorId) {
+    const rows = await sql()`SELECT 1 AS one FROM manager_links WHERE manager_id = ${managerId} AND creator_id = ${creatorId} LIMIT 1`;
+    return rows.length > 0;
+  },
+  async listManagedCreators(managerId) {
+    const rows = await sql()`SELECT u.id, u.name, u.email FROM manager_links m JOIN users u ON u.id = m.creator_id WHERE m.manager_id = ${managerId} ORDER BY u.name`;
+    return rows as never;
+  },
+  async listManagers(creatorId) {
+    const rows = await sql()`SELECT u.id, u.name, u.email FROM manager_links m JOIN users u ON u.id = m.manager_id WHERE m.creator_id = ${creatorId} ORDER BY u.name`;
+    return rows as never;
+  },
 
   async invalidateLiveResets(userId, usedAt) {
     await sql()`UPDATE password_resets SET used_at = ${usedAt} WHERE user_id = ${userId} AND used_at IS NULL`;
@@ -212,6 +240,8 @@ async function migrate(): Promise<void> {
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id TEXT',
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_followups INTEGER NOT NULL DEFAULT 0',
     'CREATE TABLE IF NOT EXISTS auto_sends (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE, kind TEXT NOT NULL, sent_on TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (creator_id, deal_id, kind))',
+    'CREATE TABLE IF NOT EXISTS manager_links (manager_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (manager_id, creator_id))',
+    'CREATE TABLE IF NOT EXISTS manager_codes (code_hash TEXT PRIMARY KEY, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at BIGINT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER NOT NULL DEFAULT 15',
     'ALTER TABLE deals ADD COLUMN IF NOT EXISTS escalation_contact TEXT',
     'ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT \'razorpay\'',

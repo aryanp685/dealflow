@@ -81,6 +81,13 @@ export interface DbDriver {
   hasAutoSend(creatorId: number, dealId: number, kind: string): Promise<boolean>;
   logAutoSend(creatorId: number, dealId: number, kind: string, sentOn: string): Promise<void>;
   listAutoSends(creatorId: number): Promise<{ deal_id: number; kind: string; sent_on: string }[]>;
+  createManagerCode(codeHash: string, creatorId: number, expiresAt: number): Promise<void>;
+  redeemManagerCode(codeHash: string, now: number): Promise<{ creator_id: number } | undefined>;
+  createManagerLink(managerId: number, creatorId: number): Promise<void>;
+  deleteManagerLink(managerId: number, creatorId: number): Promise<void>;
+  hasManagerLink(managerId: number, creatorId: number): Promise<boolean>;
+  listManagedCreators(managerId: number): Promise<{ id: number; name: string; email: string }[]>;
+  listManagers(creatorId: number): Promise<{ id: number; name: string; email: string }[]>;
   countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;

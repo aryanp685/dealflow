@@ -9,6 +9,8 @@ import Reminders, { type Reminder } from "@/components/reminders";
 import UpiSettings from "@/components/upi-settings";
 import TaxReport from "@/components/tax-report";
 import AutoFollowups from "@/components/auto-followups";
+import ManagerBar from "@/components/manager-bar";
+import ManagerTeam from "@/components/manager-team";
 import DealForm from "@/components/deal-form";
 import {
   Toast,
@@ -23,7 +25,7 @@ import { LIFETIME_PRICE, PLANS, type PlanKey } from "@/lib/schemas";
 import Logo from "@/components/logo";
 import type { Deal } from "@/lib/db";
 
-type Tab = "overview" | "deals" | "reminders" | "tax" | "pricing";
+type Tab = "overview" | "deals" | "reminders" | "tax" | "team" | "pricing";
 
 export default function AppShell({
   userName,
@@ -158,6 +160,8 @@ export default function AppShell({
         maxActive={plan?.max_active_deals}
       />
 
+      <ManagerBar notify={notify} />
+
       <m.nav
         className="tabs"
         variants={staggerParent}
@@ -170,6 +174,7 @@ export default function AppShell({
             ["deals", `Deals${deals.length ? ` · ${deals.length}` : ""}`],
             ["reminders", "Follow-ups"],
             ["tax", "Tax report"],
+            ["team", "Team"],
             ["pricing", "Pricing"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -261,6 +266,7 @@ export default function AppShell({
             )}
           </>
         )}
+        {tab === "team" && <ManagerTeam notify={notify} />}
         {tab === "tax" && (
           <TaxReport deals={deals} planKey={plan?.key ?? "free"} onUpgrade={() => setTab("pricing")} />
         )}
@@ -383,10 +389,12 @@ const TIERS: Tier[] = [
     note: "power users & managers",
     features: [
       "Everything in Creator",
+      "CA-ready TDS + GST reports (quarterly, FY-wise)",
+      "Team mode — manage multiple creators from one login",
       "Priority support — replies within 24 hours",
       "Early access to new features + roadmap votes",
     ],
-    coming: "Coming soon on Pro: team workspaces, brand-wise revenue reports, auto monthly tax summary.",
+    coming: "Coming soon on Pro: brand-wise revenue reports, auto monthly tax summary.",
   },
 ];
 

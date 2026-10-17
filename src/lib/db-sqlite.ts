@@ -39,6 +39,8 @@ function migrate(database: Database.Database) {
     'ALTER TABLE users ADD COLUMN upi_id TEXT',
     'ALTER TABLE users ADD COLUMN auto_followups INTEGER NOT NULL DEFAULT 0',
     'CREATE TABLE IF NOT EXISTS auto_sends (id INTEGER PRIMARY KEY AUTOINCREMENT, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE, kind TEXT NOT NULL, sent_on TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime(\'now\')), UNIQUE (creator_id, deal_id, kind))',
+    'CREATE TABLE IF NOT EXISTS manager_links (manager_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TEXT NOT NULL DEFAULT (datetime(\'now\')), UNIQUE (manager_id, creator_id))',
+    'CREATE TABLE IF NOT EXISTS manager_codes (code_hash TEXT PRIMARY KEY, creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime(\'now\')))',
   ]) {
     try { database.exec(stmt); } catch { }
   }
@@ -275,6 +277,31 @@ export const driver: DbDriver = {
   },
   async listAutoSends(creatorId) {
     return handle().prepare('SELECT deal_id, kind, sent_on FROM auto_sends WHERE creator_id = ?').all(creatorId) as never;
+  },
+  async createManagerCode(codeHash, creatorId, expiresAt) {
+    handle().prepare('DELETE FROM manager_codes WHERE creator_id = ?').run(creatorId);
+    handle().prepare('INSERT INTO manager_codes (code_hash, creator_id, expires_at) VALUES (?, ?, ?)').run(codeHash, creatorId, expiresAt);
+  },
+  async redeemManagerCode(codeHash, now) {
+    const row = handle().prepare('SELECT creator_id FROM manager_codes WHERE code_hash = ? AND expires_at > ?').get(codeHash, now) as { creator_id: number } | undefined;
+    if (row) handle().prepare('DELETE FROM manager_codes WHERE code_hash = ?').run(codeHash);
+    return row;
+  },
+  async createManagerLink(managerId, creatorId) {
+    handle().prepare('INSERT OR IGNORE INTO manager_links (manager_id, creator_id) VALUES (?, ?)').run(managerId, creatorId);
+  },
+  async deleteManagerLink(managerId, creatorId) {
+    handle().prepare('DELETE FROM manager_links WHERE manager_id = ? AND creator_id = ?').run(managerId, creatorId);
+  },
+  async hasManagerLink(managerId, creatorId) {
+    const row = handle().prepare('SELECT 1 AS one FROM manager_links WHERE manager_id = ? AND creator_id = ?').get(managerId, creatorId) as { one: number } | undefined;
+    return !!row;
+  },
+  async listManagedCreators(managerId) {
+    return handle().prepare('SELECT u.id, u.name, u.email FROM manager_links m JOIN users u ON u.id = m.creator_id WHERE m.manager_id = ? ORDER BY u.name').all(managerId) as never;
+  },
+  async listManagers(creatorId) {
+    return handle().prepare('SELECT u.id, u.name, u.email FROM manager_links m JOIN users u ON u.id = m.manager_id WHERE m.creator_id = ? ORDER BY u.name').all(creatorId) as never;
   },
 
   async invalidateLiveResets(userId, usedAt) {

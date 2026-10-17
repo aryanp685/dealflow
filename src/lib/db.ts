@@ -123,6 +123,27 @@ export async function logAutoSend(creatorId: number, dealId: number, kind: strin
 export async function listAutoSends(creatorId: number) {
   return active.listAutoSends(creatorId);
 }
+export async function createManagerCode(codeHash: string, creatorId: number, expiresAt: number) {
+  return active.createManagerCode(codeHash, creatorId, expiresAt);
+}
+export async function redeemManagerCode(codeHash: string, now: number) {
+  return active.redeemManagerCode(codeHash, now);
+}
+export async function createManagerLink(managerId: number, creatorId: number) {
+  return active.createManagerLink(managerId, creatorId);
+}
+export async function deleteManagerLink(managerId: number, creatorId: number) {
+  return active.deleteManagerLink(managerId, creatorId);
+}
+export async function hasManagerLink(managerId: number, creatorId: number) {
+  return active.hasManagerLink(managerId, creatorId);
+}
+export async function listManagedCreators(managerId: number) {
+  return active.listManagedCreators(managerId);
+}
+export async function listManagers(creatorId: number) {
+  return active.listManagers(creatorId);
+}
 export async function resetDbHandle() {
   resetSqlite();
 }

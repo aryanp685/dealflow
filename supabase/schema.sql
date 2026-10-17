@@ -113,3 +113,17 @@ create table if not exists auto_sends (
   created_at      timestamptz not null default now(),
   unique (creator_id, deal_id, kind)
 );
+
+create table if not exists manager_links (
+  manager_id      integer not null references users (id) on delete cascade,
+  creator_id      integer not null references users (id) on delete cascade,
+  created_at      timestamptz not null default now(),
+  unique (manager_id, creator_id)
+);
+
+create table if not exists manager_codes (
+  code_hash       text primary key,
+  creator_id      integer not null references users (id) on delete cascade,
+  expires_at      bigint not null,
+  created_at      timestamptz not null default now()
+);
