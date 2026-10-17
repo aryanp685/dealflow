@@ -54,7 +54,7 @@ export default function DemoPage() {
   const collected = rows
     .filter(({ deal }) => deal.payment_status === 'paid')
     .reduce((s, r) => s + inr(r.deal, r.cash.net_receivable), 0);
-  const reminders = buildReminders(deals).slice(0, 3);
+  const reminders = buildReminders(deals, new Date(), { upiId: 'creator@upi', payeeName: 'Demo Creator' }).slice(0, 3);
 
   return (
     <div className="shell">

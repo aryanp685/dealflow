@@ -811,3 +811,136 @@ test('demo: every sample deal computes money without throwing', () => {
     assert.ok(Number.isFinite(m.net_receivable));
   }
 });
+
+const { upiPayLink, UPI_ID_RE } = require('../test-build/reminders.js');
+
+const UPI_OPTS = { upiId: 'creator@okhdfc', payeeName: 'Test Creator' };
+
+test('upiPayLink builds a valid upi:// URL for INR deals', () => {
+  const link = upiPayLink({ upiId: 'creator@okhdfc', payeeName: 'Test Creator', amount: 18000, currency: 'INR', note: 'Invoice INV-001' });
+  assert.ok(link.startsWith('upi://pay?pa=creator@okhdfc'));
+  assert.match(link, /am=18000(\.00)?/);
+  assert.match(link, /cu=INR/);
+  assert.match(link, /pn=Test%20Creator/);
+  assert.match(link, /tn=Invoice%20INV-001/);
+});
+
+test('upiPayLink refuses non-INR, bad IDs, and non-positive amounts', () => {
+  assert.equal(upiPayLink({ upiId: 'creator@okhdfc', payeeName: '', amount: 100, currency: 'USD', note: '' }), null);
+  assert.equal(upiPayLink({ upiId: 'not-an-upi-id', payeeName: '', amount: 100, currency: 'INR', note: '' }), null);
+  assert.equal(upiPayLink({ upiId: 'creator@okhdfc', payeeName: '', amount: 0, currency: 'INR', note: '' }), null);
+  assert.equal(UPI_ID_RE.test('name@okhdfc'), true);
+  assert.equal(UPI_ID_RE.test('no-at-sign'), false);
+});
+
+test('payment reminders carry a UPI pay link when the creator set a UPI ID', () => {
+  const list = buildReminders([deal({ invoice_due_on: '2026-09-01' })], TODAY, UPI_OPTS);
+  const r = list.find((x) => x.kind === 'payment_overdue_2');
+  assert.ok(r, 'expected a payment_overdue_2 reminder');
+  assert.match(r.message, /upi:\/\/pay\?pa=creator@okhdfc/);
+  assert.match(r.message, /am=18000/);
+});
+
+test('reminders stay link-free without a UPI ID, and USD deals never get one', () => {
+  const plain = buildReminders([deal({ invoice_due_on: '2026-09-01' })], TODAY);
+  assert.ok(!plain.some((x) => x.message.includes('upi://pay')));
+  const usd = buildReminders([deal({ invoice_due_on: '2026-09-01', currency: 'USD', deal_value: 500, tds_pct: 0 })], TODAY, UPI_OPTS);
+  assert.ok(!usd.some((x) => x.message.includes('upi://pay')));
+});
+
+const { fyOf, quarterOf, currentFy, buildCaReport } = require('../test-build/tax-report.js');
+
+test('fyOf splits the year at April', () => {
+  assert.equal(fyOf('2025-03-31'), 2024);
+  assert.equal(fyOf('2025-04-01'), 2025);
+  assert.equal(fyOf('2026-01-15'), 2025);
+  assert.equal(fyOf('not-a-date'), null);
+});
+
+test('quarterOf maps months to FY quarters', () => {
+  assert.equal(quarterOf('2025-04-01'), 'Q1');
+  assert.equal(quarterOf('2025-06-30'), 'Q1');
+  assert.equal(quarterOf('2025-09-30'), 'Q2');
+  assert.equal(quarterOf('2025-12-31'), 'Q3');
+  assert.equal(quarterOf('2026-03-31'), 'Q4');
+  assert.equal(quarterOf('2026-01-01'), 'Q4');
+});
+
+test('currentFy follows the April boundary', () => {
+  assert.equal(currentFy(new Date('2026-03-31T12:00:00')), 2025);
+  assert.equal(currentFy(new Date('2026-04-01T12:00:00')), 2026);
+});
+
+test('buildCaReport buckets by invoice date and sums quarters in INR', () => {
+  const q1 = deal({ invoice_number: 'INV-101', invoice_sent_on: '2025-05-10', deal_value: 10000, tds_pct: 10, gst_applicable: 0 });
+  const q4 = deal({ invoice_number: 'INV-102', invoice_sent_on: '2026-02-10', deal_value: 20000, tds_pct: 10, gst_applicable: 1 });
+  const otherFy = deal({ invoice_number: 'INV-999', invoice_sent_on: '2024-05-10' });
+  const noInvoice = deal({ invoice_number: null, invoice_sent_on: null });
+  const cancelled = deal({ invoice_number: 'INV-XX', invoice_sent_on: '2025-05-10', status: 'cancelled', payment_status: 'cancelled' });
+  const r = buildCaReport([q1, q4, otherFy, noInvoice, cancelled], 2025);
+  assert.equal(r.rows.length, 2);
+  assert.equal(r.excluded, 2);
+  assert.deepEqual(r.rows.map((x) => x.quarter), ['Q1', 'Q4']);
+  const s1 = r.summary.find((x) => x.quarter === 'Q1');
+  assert.equal(s1.invoices, 1);
+  assert.equal(s1.taxable, 10000);
+  assert.equal(s1.tds, 1000);
+  assert.equal(s1.net, 9000);
+  const s4 = r.summary.find((x) => x.quarter === 'Q4');
+  assert.equal(s4.invoices, 1);
+  assert.equal(s4.taxable, 20000);
+  assert.equal(s4.gst, 3600);
+  assert.equal(s4.tds, 2000);
+  assert.equal(s4.net, 21600);
+});
+
+test('buildCaReport blends USD rows at the fixed rate', () => {
+  const usd = deal({ invoice_number: 'INV-US', invoice_sent_on: '2025-08-01', currency: 'USD', deal_value: 1000, tds_pct: 0, gst_applicable: 0 });
+  const r = buildCaReport([usd], 2025);
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.rows[0].quarter, 'Q2');
+  assert.equal(r.rows[0].net, 1000);
+  const s2 = r.summary.find((x) => x.quarter === 'Q2');
+  assert.equal(s2.net, 1000 * lib.USD_INR);
+});
+
+const { AUTO_EMAIL_KINDS, autoSendKey, selectAutoFollowups } = require('../test-build/reminders.js');
+
+test('auto follow-ups pick only gentle email-safe kinds, skipping already-sent', () => {
+  const mk = (deal_id, kind) => ({ deal_id, kind });
+  const all = ['advance_not_received', 'payment_due_soon', 'payment_overdue_1', 'payment_overdue_2', 'payment_overdue_final', 'payment_overdue_samadhaan', 'invoice_not_sent', 'delivery_upcoming'].map((k) => mk(1, k));
+  assert.deepEqual(
+    selectAutoFollowups(all, new Set()).map((r) => r.kind),
+    ['advance_not_received', 'payment_due_soon', 'payment_overdue_1', 'payment_overdue_2']
+  );
+  assert.deepEqual(
+    selectAutoFollowups(all, new Set(['1:payment_due_soon'])).map((r) => r.kind),
+    ['advance_not_received', 'payment_overdue_1', 'payment_overdue_2']
+  );
+  assert.equal(autoSendKey(7, 'payment_overdue_1'), '7:payment_overdue_1');
+  assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_final'));
+  assert.ok(!AUTO_EMAIL_KINDS.includes('payment_overdue_samadhaan'));
+});
+
+const { generatePairCode, hashPairCode, isValidPairCodeFormat, canLink } = require('../test-build/manager.js');
+
+test('pair codes are short, unambiguous and hash stably', () => {
+  for (let i = 0; i < 20; i++) {
+    const c = generatePairCode();
+    assert.equal(c.length, 6);
+    assert.ok(isValidPairCodeFormat(c));
+    assert.ok(!/[01ILO]/.test(c), 'no ambiguous characters');
+  }
+  assert.equal(hashPairCode('ABC123'), hashPairCode(' abc123 '));
+  assert.equal(hashPairCode('ABC123').length, 64);
+  assert.ok(!isValidPairCodeFormat('ABC12'));
+  assert.ok(!isValidPairCodeFormat('ABC1234'));
+  assert.ok(!isValidPairCodeFormat('ABC-23'));
+});
+
+test('manager links require two distinct positive user ids', () => {
+  assert.equal(canLink(1, 2), true);
+  assert.equal(canLink(2, 2), false);
+  assert.equal(canLink(0, 2), false);
+  assert.equal(canLink(1.5, 2), false);
+});

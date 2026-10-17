@@ -4,6 +4,8 @@ export type User = {
   id: number;
   name: string;
   email: string;
+  upi_id: string | null;
+  auto_followups: number;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;
@@ -57,7 +59,7 @@ export type Deal = {
 };
 
 export interface DbDriver {
-  listUsers(): Promise<{ id: number; name: string; email: string }[]>;
+  listUsers(): Promise<{ id: number; name: string; email: string; upi_id: string | null }[]>;
   listDeals(creatorId: number): Promise<Deal[]>;
   getDeal(creatorId: number, dealId: number): Promise<Deal | undefined>;
   insertDeal(creatorId: number, fields: Record<string, unknown>): Promise<Deal>;
@@ -73,6 +75,19 @@ export interface DbDriver {
   bumpSessionVersion(userId: number): Promise<void>;
   getPlanInfo(userId: number): Promise<PlanInfo | undefined>;
   grantPlan(userId: number, plan: string, planExpiresAt: number | null): Promise<void>;
+  updateUpiId(userId: number, upiId: string | null): Promise<void>;
+  updateAutoFollowups(userId: number, on: boolean): Promise<void>;
+  listAutoFollowupUsers(): Promise<{ id: number; name: string; email: string; upi_id: string | null }[]>;
+  hasAutoSend(creatorId: number, dealId: number, kind: string): Promise<boolean>;
+  logAutoSend(creatorId: number, dealId: number, kind: string, sentOn: string): Promise<void>;
+  listAutoSends(creatorId: number): Promise<{ deal_id: number; kind: string; sent_on: string }[]>;
+  createManagerCode(codeHash: string, creatorId: number, expiresAt: number): Promise<void>;
+  redeemManagerCode(codeHash: string, now: number): Promise<{ creator_id: number } | undefined>;
+  createManagerLink(managerId: number, creatorId: number): Promise<void>;
+  deleteManagerLink(managerId: number, creatorId: number): Promise<void>;
+  hasManagerLink(managerId: number, creatorId: number): Promise<boolean>;
+  listManagedCreators(managerId: number): Promise<{ id: number; name: string; email: string }[]>;
+  listManagers(creatorId: number): Promise<{ id: number; name: string; email: string }[]>;
   countLifetimeSales(): Promise<number>;
 
   invalidateLiveResets(userId: number, usedAt: number): Promise<void>;

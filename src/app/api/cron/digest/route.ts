@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   for (const user of users) {
     if (sent >= DAILY_CAP) break;
     const deals = await listDeals(user.id);
-    const reminders = buildReminders(deals, today);
+    const reminders = buildReminders(deals, today, { upiId: user.upi_id ?? undefined, payeeName: user.name });
     const renewal = renewalNotice(await getPlanInfo(user.id), site);
     if (reminders.length === 0 && !renewal) {
       skippedNoReminders += 1;

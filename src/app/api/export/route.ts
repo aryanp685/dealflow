@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import { UnauthorizedError, requireUser } from '@/lib/auth';
+import { UnauthorizedError, effectivePlan, requireUser } from '@/lib/auth';
 import { listDeals } from '@/lib/db';
 import { computeDealMoney, overdueDays } from '@/lib/money';
+import { buildCaReport } from '@/lib/tax-report';
+import { PLANS, type PlanKey } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +35,40 @@ export async function GET(request: Request) {
         headers: {
           'content-type': 'text/csv; charset=utf-8',
           'content-disposition': `attachment; filename="dealflow-invoices-zoho-${zohoStamp}.csv"`,
+        },
+      });
+    }
+
+    if (searchParams.get('format') === 'ca') {
+      const plan = PLANS[effectivePlan(user) as PlanKey] ?? PLANS.free;
+      if (plan.key !== 'pro') {
+        return NextResponse.json(
+          {
+            error: 'CA-ready tax reports are a Pro feature. Upgrade from the Pricing tab to unlock them.',
+            code: 'plan_limit',
+          },
+          { status: 402 }
+        );
+      }
+      const fy = Number(searchParams.get('fy'));
+      if (!Number.isInteger(fy) || fy < 2000 || fy > 2100) {
+        return NextResponse.json({ error: 'Pass a valid FY starting year, e.g. ?format=ca&fy=2025' }, { status: 400 });
+      }
+      const report = buildCaReport(deals, fy);
+      const caHeader = [
+        'Brand', 'Invoice no.', 'Invoice date', 'Paid on', 'Quarter', 'Currency',
+        'Taxable', 'GST', 'Invoice total', 'TDS %', 'TDS amount', 'Net receivable',
+      ];
+      const caRows = report.rows.map((r) => [
+        r.brand, r.invoice_number, r.invoice_date, r.paid_on ?? '', r.quarter, r.currency,
+        r.taxable.toFixed(2), r.gst.toFixed(2), r.invoice_total.toFixed(2),
+        String(r.tds_pct), r.tds.toFixed(2), r.net.toFixed(2),
+      ]);
+      const caCsv = [caHeader, ...caRows].map((row) => row.map(escapeCsv).join(',')).join('\r\n');
+      return new NextResponse(`\uFEFF${caCsv}`, {
+        headers: {
+          'content-type': 'text/csv; charset=utf-8',
+          'content-disposition': `attachment; filename="dealflow-ca-report-FY${fy}.csv"`,
         },
       });
     }

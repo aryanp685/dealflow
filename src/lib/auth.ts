@@ -12,6 +12,8 @@ export type User = {
   id: number;
   name: string;
   email: string;
+  upi_id: string | null;
+  auto_followups: number;
   plan: string;
   plan_expires_at: number | null;
   session_version: number;
@@ -64,20 +66,24 @@ export function createUser(input: { name: string; email: string; passwordHash: s
 }
 
 
-export async function createSessionToken(userId: number, sessionVersion = 1): Promise<string> {
-  return new SignJWT({ sub: String(userId), v: sessionVersion })
+export async function createSessionToken(userId: number, sessionVersion = 1, actingAsId: number | null = null): Promise<string> {
+  const claims: Record<string, string | number> = { sub: String(userId), v: sessionVersion };
+  if (actingAsId) claims.act = String(actingAsId);
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
     .sign(secretKey());
 }
 
-export async function readSessionToken(token: string): Promise<{ id: number; version: number } | null> {
+export async function readSessionToken(token: string): Promise<{ id: number; version: number; act: number | null } | null> {
   try {
     const { payload } = await jwtVerify(token, secretKey());
     const id = Number(payload.sub);
     const version = Number(payload.v ?? 0);
-    return Number.isInteger(id) && id > 0 ? { id, version } : null;
+    const act = Number(payload.act ?? 0);
+    if (!Number.isInteger(id) || id <= 0) return null;
+    return { id, version, act: Number.isInteger(act) && act > 0 ? act : null };
   } catch {
     return null;
   }
@@ -115,6 +121,13 @@ export async function getCurrentUser(): Promise<User | null> {
   const user = await db.findUserById(sess.id);
   if (!user) return null;
   if ((user.session_version ?? 1) !== sess.version) return null;
+  if (sess.act && sess.act !== user.id) {
+    const linked = await db.hasManagerLink(user.id, sess.act);
+    if (linked) {
+      const creator = await db.findUserById(sess.act);
+      if (creator) return creator;
+    }
+  }
   return user;
 }
 
@@ -122,6 +135,25 @@ export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();
   return user;
+}
+
+export type ManagerContext = { me: User; actingAsId: number | null; actingAs: User | null };
+
+export async function getManagerContext(): Promise<ManagerContext> {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (!token) throw new UnauthorizedError();
+  const sess = await readSessionToken(token);
+  if (!sess) throw new UnauthorizedError();
+  const me = await db.findUserById(sess.id);
+  if (!me) throw new UnauthorizedError();
+  if ((me.session_version ?? 1) !== sess.version) throw new UnauthorizedError();
+  if (!sess.act || sess.act === me.id) return { me, actingAsId: null, actingAs: null };
+  const linked = await db.hasManagerLink(me.id, sess.act);
+  if (!linked) return { me, actingAsId: null, actingAs: null };
+  const actingAs = await db.findUserById(sess.act);
+  if (!actingAs) return { me, actingAsId: null, actingAs: null };
+  return { me, actingAsId: actingAs.id, actingAs };
 }
 
 export class UnauthorizedError extends Error {

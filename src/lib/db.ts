@@ -105,6 +105,45 @@ export async function insertLicense(row: { license_key: string; user_id: number;
   return active.insertLicense(row);
 }
 
+export async function updateUpiId(userId: number, upiId: string | null) {
+  return active.updateUpiId(userId, upiId);
+}
+export async function updateAutoFollowups(userId: number, on: boolean) {
+  return active.updateAutoFollowups(userId, on);
+}
+export async function listAutoFollowupUsers() {
+  return active.listAutoFollowupUsers();
+}
+export async function hasAutoSend(creatorId: number, dealId: number, kind: string) {
+  return active.hasAutoSend(creatorId, dealId, kind);
+}
+export async function logAutoSend(creatorId: number, dealId: number, kind: string, sentOn: string) {
+  return active.logAutoSend(creatorId, dealId, kind, sentOn);
+}
+export async function listAutoSends(creatorId: number) {
+  return active.listAutoSends(creatorId);
+}
+export async function createManagerCode(codeHash: string, creatorId: number, expiresAt: number) {
+  return active.createManagerCode(codeHash, creatorId, expiresAt);
+}
+export async function redeemManagerCode(codeHash: string, now: number) {
+  return active.redeemManagerCode(codeHash, now);
+}
+export async function createManagerLink(managerId: number, creatorId: number) {
+  return active.createManagerLink(managerId, creatorId);
+}
+export async function deleteManagerLink(managerId: number, creatorId: number) {
+  return active.deleteManagerLink(managerId, creatorId);
+}
+export async function hasManagerLink(managerId: number, creatorId: number) {
+  return active.hasManagerLink(managerId, creatorId);
+}
+export async function listManagedCreators(managerId: number) {
+  return active.listManagedCreators(managerId);
+}
+export async function listManagers(creatorId: number) {
+  return active.listManagers(creatorId);
+}
 export async function resetDbHandle() {
   resetSqlite();
 }

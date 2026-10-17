@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { m, AnimatePresence } from 'motion/react';
 import { useMutation } from '@tanstack/react-query';
 import { Pill, EmptyState, listItem, staggerParent } from './ui';
-import { computeDealMoney, formatMoney, formatDate, daysUntil } from '@/lib/money';
+import { computeDealMoney, formatMoney, formatDate, daysUntil, todayISO } from '@/lib/money';
+import { msmeInterest } from '@/lib/msme';
 import type { Deal } from '@/lib/db';
 import type { DealStatus, PaymentStatus } from '@/lib/schemas';
 
@@ -84,6 +85,44 @@ export default function DealsTable({
     onMutate: (id) => setBusyId(id),
     onSettled: () => setBusyId(null),
     onSuccess: () => onChanged('Marked paid 🎉'),
+    onError: (e: Error) => onChanged(e.message, 'err'),
+  });
+
+const RETAINER_TAG_RE = / \u00b7 [A-Z][a-z]{2} \d{4}$/;
+
+  const cloneDeal = useMutation({
+    mutationFn: async (d: Deal) => {
+      const monthTag = new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      const title = `${d.title.replace(RETAINER_TAG_RE, '')} \u00b7 ${monthTag}`.slice(0, 200);
+      const res = await fetch('/api/deals', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          brand: d.brand,
+          title,
+          brand_contact: d.brand_contact ?? '',
+          brand_email: d.brand_email ?? '',
+          brand_whatsapp: d.brand_whatsapp ?? '',
+          platform: d.platform,
+          status: 'agreed',
+          payment_status: 'not_invoiced',
+          deal_value: d.deal_value,
+          currency: d.currency,
+          advance_pct: d.advance_pct,
+          tds_pct: d.tds_pct,
+          gst_applicable: d.gst_applicable === 1,
+          agreed_on: todayISO(),
+          payment_terms_days: d.payment_terms_days,
+          escalation_contact: d.escalation_contact ?? '',
+          notes: d.notes ?? '',
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Could not log next month');
+      return res.json();
+    },
+    onMutate: (d) => setBusyId(d.id),
+    onSettled: () => setBusyId(null),
+    onSuccess: () => onChanged('Next month logged — same terms, fresh payment clock'),
     onError: (e: Error) => onChanged(e.message, 'err'),
   });
 
@@ -213,6 +252,11 @@ export default function DealsTable({
                               <Pill tone="red">{Math.abs(daysUntil(d.invoice_due_on) ?? 0)}d overdue</Pill>
                             </div>
                           )}
+                          {overdue && d.currency === 'INR' && (
+                            <div className="t-muted dim" style={{ marginTop: 3 }}>
+                              +{formatMoney(msmeInterest(cash.net_receivable, Math.abs(daysUntil(d.invoice_due_on) ?? 0)).interest)} MSME interest
+                            </div>
+                          )}
                         </td>
                         <td>
                           <div className="t-muted">{formatDate(d.deliver_by)}</div>
@@ -247,7 +291,28 @@ export default function DealsTable({
                                 {busyId === d.id ? '…' : 'Paid'}
                               </button>
                             )}
+                            {d.status !== 'cancelled' && d.payment_status !== 'cancelled' && (
+                              <button
+                                className="btn sm"
+                                disabled={busyId === d.id}
+                                onClick={() => cloneDeal.mutate(d)}
+                                title="Retainer: log next month as a new deal with the same terms"
+                              >
+                                {busyId === d.id ? '…' : '🔁'}
+                              </button>
+                            )}
                             <button className="btn sm" onClick={() => onEdit(d)}>Edit</button>
+                            {(d.invoice_number || ['invoiced', 'overdue', 'paid', 'advance_paid'].includes(d.payment_status)) && (
+                              <a
+                                className="btn sm"
+                                href={`/invoice/${d.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Open printable invoice — save as PDF"
+                              >
+                                🧾
+                              </a>
+                            )}
                             <button className="btn sm danger" onClick={() => askDelete(d)} aria-label={`Delete ${d.brand} deal`}>✕</button>
                           </div>
                         </td>

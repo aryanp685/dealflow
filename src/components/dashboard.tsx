@@ -5,7 +5,7 @@ import { m } from 'motion/react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Kpi, BarRow, EmptyState, Pill, DashboardSkeleton, staggerParent, listItem } from './ui';
 import { computeDealMoney, formatMoney, formatDate } from '@/lib/money';
-import { UDYAM_URL, SAMADHAAN_URL } from '@/lib/msme';
+import { UDYAM_URL, SAMADHAAN_URL, msmeInterest, RBI_BANK_RATE_PCT, MSME_RATE_MULTIPLIER } from '@/lib/msme';
 import type { Deal } from '@/lib/db';
 
 type Metrics = {
@@ -91,6 +91,11 @@ export default function Dashboard({
   if (isLoading || !metrics) return <DashboardSkeleton />;
 
   const t = metrics.totals;
+  const msmeRate = RBI_BANK_RATE_PCT * MSME_RATE_MULTIPLIER;
+  const totalInterest = metrics.overdue_deals.reduce(
+    (a, o) => a + (o.currency === 'INR' ? msmeInterest(o.amount, o.days_overdue).interest : 0),
+    0
+  );
 
   return (
     <m.div variants={staggerParent} initial="initial" animate="animate">
@@ -188,11 +193,13 @@ export default function Dashboard({
               <thead>
                 <tr>
                   <th>Brand</th><th>Invoice</th><th>Due</th>
-                  <th className="t-right">Days late</th><th className="t-right">Amount</th><th />
+                  <th className="t-right">Days late</th><th className="t-right">Amount</th><th className="t-right">MSME interest</th><th />
                 </tr>
               </thead>
               <tbody>
-                {metrics.overdue_deals.map((o) => (
+                {metrics.overdue_deals.map((o) => {
+                  const si = o.currency === 'INR' ? msmeInterest(o.amount, o.days_overdue) : null;
+                  return (
                   <tr key={o.id}>
                     <td>
                       <div className="t-strong">{o.brand}</div>
@@ -202,6 +209,7 @@ export default function Dashboard({
                     <td className="t-muted">{formatDate(o.invoice_due_on)}</td>
                     <td className="t-right"><Pill tone="red">{o.days_overdue}d</Pill></td>
                     <td className="t-right t-money">{formatMoney(o.amount, o.currency)}</td>
+                    <td className="t-right t-money">{si ? `+${formatMoney(si.interest)}` : '\u2014'}</td>
                     <td className="t-right">
                       <button
                         className="btn sm green"
@@ -212,10 +220,16 @@ export default function Dashboard({
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <p className="card-sub" style={{ marginTop: 10 }}>
+            Total MSME interest accrued: <strong>{formatMoney(totalInterest)}</strong> — Section 15 compound
+            interest at {msmeRate}% p.a., enforceable if you&apos;re{' '}
+            <a href={UDYAM_URL} target="_blank" rel="noopener noreferrer">Udyam-registered</a>.
+          </p>
         </m.div>
       )}
 

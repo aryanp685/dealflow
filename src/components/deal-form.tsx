@@ -42,6 +42,17 @@ function fromDeal(d: Deal) {
   };
 }
 
+function fromTemplate(d: Deal) {
+  return {
+    ...BLANK,
+    brand: d.brand, brand_contact: d.brand_contact ?? '', brand_email: d.brand_email ?? '',
+    brand_whatsapp: d.brand_whatsapp ?? '', title: d.title, platform: d.platform,
+    deal_value: String(d.deal_value), currency: d.currency, advance_pct: String(d.advance_pct),
+    gst_applicable: d.gst_applicable === 1, tds_pct: String(d.tds_pct),
+    payment_terms_days: String(d.payment_terms_days ?? 15), escalation_contact: d.escalation_contact ?? '',
+  };
+}
+
 function brandHistory(deals: Deal[], brand: string) {
   const name = brand.trim().toLowerCase();
   if (!name) return null;
@@ -82,12 +93,14 @@ export default function DealForm({
   const [f, setF] = useState(() => (deal ? fromDeal(deal) : BLANK));
   const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [templateId, setTemplateId] = useState('');
 
   useEffect(() => {
     if (open) {
       setF(deal ? fromDeal(deal) : BLANK);
       setTouched(false);
       setFieldErrors({});
+      setTemplateId('');
     }
   }, [open, deal]);
   const dealsQuery = useQuery({
@@ -103,6 +116,17 @@ export default function DealForm({
     () => brandHistory(dealsQuery.data?.deals ?? [], f.brand),
     [dealsQuery.data, f.brand]
   );
+  const templates = useMemo(() => {
+    const all = dealsQuery.data?.deals ?? [];
+    return [...all].sort((a, b) =>
+      String(b.agreed_on ?? b.created_at).localeCompare(String(a.agreed_on ?? a.created_at))
+    );
+  }, [dealsQuery.data]);
+  const applyTemplate = (id: string) => {
+    setTemplateId('');
+    const t = templates.find((d) => String(d.id) === id);
+    if (t) setF(fromTemplate(t));
+  };
 
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
@@ -181,6 +205,22 @@ export default function DealForm({
       <form id="deal-form" onSubmit={submit}>
         <div className="form-grid">
           <div className="form-section">The deal</div>
+
+          {!deal && templates.length > 0 && (
+            <label className="field">
+              <label>Start from a past deal</label>
+              <select value={templateId} onChange={(e) => applyTemplate(e.target.value)}>
+                <option value="">Blank form…</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.brand} — {t.title}
+                  </option>
+                ))}
+              </select>
+              <div className="hint">Copies brand, money and terms — dates and payment start fresh.</div>
+            </label>
+          )}
+
 
           <label className="field">
             <label>Brand *</label>

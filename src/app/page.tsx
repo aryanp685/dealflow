@@ -204,6 +204,7 @@ export default function LandingPage() {
             <Reveal delay={0.06}><ToolLink href="/tools/tds-calculator" icon="🧮" title="TDS Calculator for Creators" body="194J, 194H, 194O — what actually lands in your account after GST and TDS." /></Reveal>
             <Reveal delay={0.12}><ToolLink href="/tools/gst-invoice-generator" icon="🧾" title="GST Invoice Generator" body="A clean, print-ready GST invoice. No account needed." /></Reveal>
             <Reveal delay={0.18}><ToolLink href="/tools/brand-deal-rate-calculator" icon="📈" title="Brand Deal Rate Calculator" body="Followers and views in, a defensible quote out — with the formula shown." /></Reveal>
+            <Reveal delay={0.24}><ToolLink href="/tools/collab-agreement-generator" icon="📝" title="Collab Agreement Generator" body="Fee, advance, usage rights, exclusivity — a short-form agreement in 60 seconds." /></Reveal>
           </div>
         </section>
 
@@ -242,7 +243,7 @@ export default function LandingPage() {
               name="Pro" amount={formatMoney(7990)} per="/year" savePct={17}
               note="≈ ₹666/mo — best value"
               alts={[`${formatMoney(1999)} / 3 months — save 17%`, `${formatMoney(799)} / month`]}
-              features={['Everything in Creator', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team workspaces & CA reports (coming soon — Pro members first)']}
+              features={['Everything in Creator', 'CA-ready TDS + GST reports (quarterly, FY-wise)', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team workspaces (coming soon — Pro members first)']}
               cta="Pay once for the year" href="/signup"
             /></Reveal>
           </div>

@@ -10,6 +10,7 @@ export const LIMITS = {
   forgotPassword: { limit: 3, windowMs: 60 * 60_000 },
   resetPassword: { limit: 5, windowMs: 60 * 60_000 },
   licenseRedeem: { limit: 10, windowMs: 60 * 60_000 },
+  managerRedeem: { limit: 10, windowMs: 60 * 60_000 },
 } satisfies Record<string, LimitSpec>;
 
 let _redis: Redis | null | undefined;

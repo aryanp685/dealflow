@@ -7,6 +7,7 @@ const TOOLS = [
   '/tools/tds-calculator',
   '/tools/gst-invoice-generator',
   '/tools/brand-deal-rate-calculator',
+  '/tools/collab-agreement-generator',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

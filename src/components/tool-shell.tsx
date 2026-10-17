@@ -64,6 +64,7 @@ export default function ToolShell({
           <Link href="/tools/gst-invoice-generator">GST invoice</Link>
           <Link href="/tools/brand-deal-rate-calculator">Rate calculator</Link>
           <Link href="/tools/msme-demand-letter">Demand letter</Link>
+          <Link href="/tools/collab-agreement-generator">Agreement</Link>
           <Link href="/privacy">Privacy</Link>
         </div>
       </footer>

@@ -736,6 +736,9 @@ tr.deal-row:hover { background: var(--card-hover); }
   .letter { background: #fff; color: #000; border: 1px solid #999; }
   .card, .field input, .field select { background: #fff !important; color: #000 !important; border-color: #999 !important; }
   .field label, .card-sub, .tool-head p { color: #333 !important; }
+  .invoice-page { padding: 0 !important; max-width: 100% !important; }
+  .invoice { box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; max-width: 100% !important; }
+  .inv-note { background: #fff !important; border: 1px solid #999; }
 }
 
 
@@ -789,3 +792,32 @@ tr.deal-row:hover { background: var(--card-hover); }
   padding: 8px 10px; border-radius: 8px; background: var(--bg-soft);
   border: 1px dashed var(--border);
 }
+
+.invoice-page { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+.invoice-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.invoice-toolbar-hint { font-size: 13px; color: var(--muted); flex: 1; min-width: 200px; }
+.invoice { background: #fff; color: #141414; border-radius: 14px; padding: 40px 44px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.inv-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid #141414; flex-wrap: wrap; }
+.inv-title { font-size: 26px; font-weight: 800; letter-spacing: .04em; }
+.inv-sub { font-size: 13px; color: #555; margin-top: 4px; }
+.inv-meta { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; text-align: right; }
+.inv-meta span { color: #666; margin-right: 8px; }
+.inv-draft { margin: 14px 0 0; padding: 8px 12px; border: 1px dashed #b3541e; color: #b3541e; border-radius: 8px; font-size: 13px; }
+.inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 22px 0; }
+.inv-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: #777; margin-bottom: 4px; }
+.inv-party { font-size: 14px; line-height: 1.55; }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 0; }
+.inv-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: #666; padding: 8px 6px; border-bottom: 1px solid #ddd; }
+.inv-table td { padding: 12px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+.inv-table .r { text-align: right; font-variant-numeric: tabular-nums; }
+.inv-platform { color: #777; font-size: 12.5px; }
+.inv-totals { margin-left: auto; max-width: 340px; margin-top: 14px; font-size: 14px; }
+.inv-totals > div { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; font-variant-numeric: tabular-nums; }
+.inv-total { border-top: 1px solid #ddd; margin-top: 6px; padding-top: 10px !important; font-weight: 700; font-size: 15px; }
+.inv-tds { color: #666; }
+.inv-net { font-weight: 800; font-size: 15.5px; color: #0d5c2e; }
+.inv-note { margin-top: 16px; font-size: 13px; color: #444; background: #f6f6f6; border-radius: 8px; padding: 9px 12px; }
+.inv-pay { margin-top: 18px; font-size: 14px; border-top: 1px solid #eee; padding-top: 14px; line-height: 1.6; }
+.inv-terms { font-size: 13px; color: #555; }
+.inv-foot { margin-top: 26px; font-size: 12px; color: #999; text-align: center; }
+@media (max-width: 560px) { .invoice { padding: 26px 20px; } .inv-parties { grid-template-columns: 1fr; } }
