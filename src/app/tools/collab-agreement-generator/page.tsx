@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     'Generate a short-form brand collab agreement in 60 seconds — fee, advance, revisions, usage rights and exclusivity, written in plain English. Free, no signup.',
   keywords: ['brand collaboration agreement', 'influencer agreement template India', 'creator contract generator', 'collab agreement format', 'usage rights exclusivity clause'],
   alternates: { canonical: '/tools/collab-agreement-generator' },
+  openGraph: {
+    title: 'Brand Collaboration Agreement Generator for Creators (free)',
+    description: 'Generate a short-form brand collab agreement in 60 seconds — fee, advance, revisions, usage rights and exclusivity, written in plain English. Free, no signup.',
+    url: '/tools/collab-agreement-generator',
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+    images: ['/og-collab-agreement.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Brand Collaboration Agreement Generator for Creators (free)',
+    description: 'Generate a short-form brand collab agreement in 60 seconds — fee, advance, revisions, usage rights and exclusivity, written in plain English. Free, no signup.',
+    images: ['/og-collab-agreement.png'],
+  },
 };
 
 const faqs = [

@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     'How much actually lands in your bank after TDS and GST? Free calculator for brand deals, freelancing and commissions — 194J at 10%, 194H at 5%, 194O at 2%, with the GST split.',
   keywords: ['TDS calculator', '194J TDS rate', 'TDS on brand deals', 'freelancer TDS India', '194H commission TDS'],
   alternates: { canonical: '/tools/tds-calculator' },
+  openGraph: {
+    title: 'TDS Calculator for Creators & Freelancers (194J, 194H, 194O)',
+    description: 'How much actually lands in your bank after TDS and GST? Free calculator for brand deals, freelancing and commissions — 194J at 10%, 194H at 5%, 194O at 2%, with the GST split.',
+    url: '/tools/tds-calculator',
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+    images: ['/og-tds.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TDS Calculator for Creators & Freelancers (194J, 194H, 194O)',
+    description: 'How much actually lands in your bank after TDS and GST? Free calculator for brand deals, freelancing and commissions — 194J at 10%, 194H at 5%, 194O at 2%, with the GST split.',
+    images: ['/og-tds.png'],
+  },
 };
 
 const faqs = [

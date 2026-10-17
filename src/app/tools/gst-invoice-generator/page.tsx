@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     'Make a clean, print-ready GST invoice in 30 seconds — CGST/SGST split calculated automatically, GSTIN optional. Free, no signup, no watermark.',
   keywords: ['GST invoice generator', 'freelance invoice India', 'creator invoice template', 'CGST SGST invoice', 'bill of supply'],
   alternates: { canonical: '/tools/gst-invoice-generator' },
+  openGraph: {
+    title: 'Free GST Invoice Generator for Creators & Freelancers',
+    description: 'Make a clean, print-ready GST invoice in 30 seconds — CGST/SGST split calculated automatically, GSTIN optional. Free, no signup, no watermark.',
+    url: '/tools/gst-invoice-generator',
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+    images: ['/og-gst-invoice.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Free GST Invoice Generator for Creators & Freelancers',
+    description: 'Make a clean, print-ready GST invoice in 30 seconds — CGST/SGST split calculated automatically, GSTIN optional. Free, no signup, no watermark.',
+    images: ['/og-gst-invoice.png'],
+  },
 };
 
 const faqs = [

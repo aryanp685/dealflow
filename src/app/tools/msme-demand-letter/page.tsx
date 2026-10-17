@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     'Generate a legal demand notice for unpaid invoices under Section 15 of the MSMED Act 2006 — with compound interest at 3× the RBI bank rate calculated for you. Free, no signup.',
   keywords: ['MSME demand letter', 'section 15 MSMED act', 'unpaid invoice legal notice India', 'MSME samadhaan', '45 days payment rule'],
   alternates: { canonical: '/tools/msme-demand-letter' },
+  openGraph: {
+    title: 'MSME Payment Demand Letter Generator (Section 15, free)',
+    description: 'Generate a legal demand notice for unpaid invoices under Section 15 of the MSMED Act 2006 — with compound interest at 3× the RBI bank rate calculated for you. Free, no signup.',
+    url: '/tools/msme-demand-letter',
+    siteName: 'DealFlow',
+    type: 'website',
+    locale: 'en_IN',
+    images: ['/og-msme-letter.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MSME Payment Demand Letter Generator (Section 15, free)',
+    description: 'Generate a legal demand notice for unpaid invoices under Section 15 of the MSMED Act 2006 — with compound interest at 3× the RBI bank rate calculated for you. Free, no signup.',
+    images: ['/og-msme-letter.png'],
+  },
 };
 
 const faqs = [
