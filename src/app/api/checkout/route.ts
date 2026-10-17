@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import Stripe from 'stripe';
 import { UnauthorizedError, requireUser } from '@/lib/auth';
-import { countLifetimeSales } from '@/lib/db';
-import { LIFETIME_CAP, PLANS, expectedMinorUnits } from '@/lib/schemas';
+import { PLANS, expectedMinorUnits } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,9 +26,9 @@ export async function POST(request: Request) {
     const minor = expectedMinorUnits(plan, billing, currency);
     if (minor === null) return NextResponse.json({ error: 'Unknown plan' }, { status: 400 });
 
-    if (billing === 'lifetime' && (await countLifetimeSales()) >= LIFETIME_CAP) {
+    if (billing === 'lifetime') {
       return NextResponse.json(
-        { error: 'The 50 lifetime spots are gone — yearly is still a great deal.' },
+        { error: 'Lifetime is sold exclusively through our Payhip launch deal (first 50 only).' },
         { status: 410 }
       );
     }

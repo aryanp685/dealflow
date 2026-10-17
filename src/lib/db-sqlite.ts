@@ -358,4 +358,8 @@ export const driver: DbDriver = {
       .prepare('INSERT INTO licenses (license_key, user_id, buyer_email, product_link) VALUES (?, ?, ?, ?)')
       .run(row.license_key, row.user_id, row.buyer_email, row.product_link);
   },
+  async countLicenses() {
+    const row = handle().prepare('SELECT COUNT(*) AS c FROM licenses').get() as { c: number };
+    return row.c;
+  },
 };

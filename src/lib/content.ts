@@ -21,7 +21,7 @@ export const faqs = [
   },
   {
     q: 'Does it send the follow-ups automatically?',
-    a: "It writes them and opens WhatsApp with the message ready — you press send. That's deliberate: a message from your number gets answered, an automated one gets ignored. One tap, not one hour.",
+    a: "Both. WhatsApp nudges open with the message ready — you press send, because a message from your number gets answered. And if you switch on auto follow-ups, gentle email reminders go to brands by themselves every morning; final notices and legal threats always stay manual.",
   },
   {
     q: 'Is there a contract or auto-debit?',
@@ -35,5 +35,5 @@ export const offers = [
   { name: 'Creator — yearly', price: '2990', priceCurrency: 'INR' },
   { name: 'Pro', price: '799', priceCurrency: 'INR' },
   { name: 'Pro — yearly', price: '7990', priceCurrency: 'INR' },
-  { name: 'Pro — lifetime', price: '7499', priceCurrency: 'INR' },
+  { name: 'Pro — lifetime launch deal', price: '999', priceCurrency: 'INR' },
 ];

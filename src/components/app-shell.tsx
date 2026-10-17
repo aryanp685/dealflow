@@ -21,7 +21,7 @@ import {
   listItem,
 } from "@/components/ui";
 import { formatMoney } from "@/lib/money";
-import { LIFETIME_PRICE, PLANS, type PlanKey } from "@/lib/schemas";
+import { PAYHIP_LIFETIME_URL, PLANS, type PlanKey } from "@/lib/schemas";
 import Logo from "@/components/logo";
 import type { Deal } from "@/lib/db";
 import LifetimeSpots from "@/components/lifetime-spots";
@@ -556,8 +556,6 @@ function Pricing({
     },
   });
 
-  const lifetimeLabel =
-    currency === "INR" ? formatMoney(LIFETIME_PRICE.INR) : `$${LIFETIME_PRICE.USD}`;
 
   const sym = currency === "INR" ? "₹" : "$";
 
@@ -691,18 +689,22 @@ function Pricing({
         id="tier-lifetime"
         style={highlight === "lifetime" ? { borderColor: "var(--accent)", boxShadow: "0 0 0 2px var(--accent-soft)" } : undefined}
       >
-        <h3 className="card-title">Lifetime deal — launch only</h3>
+        <h3 className="card-title">Lifetime launch deal — first 50 only</h3>
         <p className="card-sub">
-          <strong>{lifetimeLabel} one-time.</strong> Pro, forever — no renewals,
+          <strong>{formatMoney(999)} one-time on Payhip.</strong> Pro, forever — no renewals,
           no expiry. <LifetimeSpots />
         </p>
-        <button
+        <a
           className="btn primary btn-block"
-          disabled={checkout.isPending}
-          onClick={() => checkout.mutate({ tier: "pro", billing: "lifetime" })}
+          href={PAYHIP_LIFETIME_URL}
+          target="_blank"
+          rel="noreferrer"
         >
-          {checkout.isPending ? "Opening…" : `Pay ${lifetimeLabel} once — Pro forever`}
-        </button>
+          Claim on Payhip
+        </a>
+        <p className="card-sub" style={{ marginTop: 10 }}>
+          Bought already? Paste your Payhip key below to unlock Pro here.
+        </p>
         {checkout.isError && (
           <div className="notice" style={{ marginTop: 14 }}>
             {(checkout.error as Error).message}
