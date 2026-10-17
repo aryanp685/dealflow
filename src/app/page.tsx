@@ -11,6 +11,7 @@ import dealsShot from '../assets/shots/deals.png';
 import followupsShot from '../assets/shots/followups.png';
 import { faqs } from '@/lib/content';
 import MobileNav from '@/components/mobile-nav';
+import LifetimeSpots from "@/components/lifetime-spots";
 
 export const metadata: Metadata = {
   title: 'DealFlow — get every brand deal paid',
@@ -236,15 +237,16 @@ export default function LandingPage() {
                 'Invoice ageing + GST/TDS split',
                 'UPI payment links',
                 'Zoho-ready invoice export',
+                'Invoice PDFs + auto email follow-ups',
               ]}
-              cta="Pay once for the year" href="/signup"
+              cta="Pay once for the year" href="/signup?plan=creator&billing=yearly"
             /></Reveal>
             <Reveal delay={0.16}><PriceCard
               name="Pro" amount={formatMoney(7990)} per="/year" savePct={17}
               note="≈ ₹666/mo — best value"
               alts={[`${formatMoney(1999)} / 3 months — save 17%`, `${formatMoney(799)} / month`]}
-              features={['Everything in Creator', 'CA-ready TDS + GST reports (quarterly, FY-wise)', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team workspaces (coming soon — Pro members first)']}
-              cta="Pay once for the year" href="/signup"
+              features={['Everything in Creator', 'CA-ready TDS + GST reports (quarterly, FY-wise)', 'Priority support — replies within 24 hours', 'Early access to new features + roadmap votes', 'Team mode — manage multiple creators from one login']}
+              cta="Pay once for the year" href="/signup?plan=pro&billing=yearly"
             /></Reveal>
           </div>
           <p className="pricing-ppp">
@@ -255,11 +257,10 @@ export default function LandingPage() {
             <div>
               <div className="lifetime-title">Lifetime deal — first 50 customers</div>
               <p>
-                <strong>{formatMoney(7499)} / $149 one-time.</strong> Everything in Pro, forever. When 50 are gone,
-                they&apos;re gone.
+                <strong>{formatMoney(7499)} / $149 one-time.</strong> Everything in Pro, forever. <LifetimeSpots />
               </p>
             </div>
-            <Link href="/signup" className="btn primary lg">Claim lifetime access</Link>
+            <Link href="/signup?plan=pro&billing=lifetime" className="btn primary lg">Claim lifetime access</Link>
           </div></Reveal>
         </section>
 

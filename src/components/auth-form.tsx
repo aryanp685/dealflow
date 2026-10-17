@@ -9,7 +9,7 @@ import Logo from './logo';
 
 type Mode = 'login' | 'signup';
 
-export default function AuthForm({ initialMode = 'login' }: { initialMode?: Mode }) {
+export default function AuthForm({ initialMode = 'login', nextPath = '/app' }: { initialMode?: Mode; nextPath?: string }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: Mode
       return json;
     },
     onSuccess: () => {
-      window.location.assign('/app');
+      window.location.assign(nextPath);
     },
     onError: (e: Error) => setError(e.message),
   });

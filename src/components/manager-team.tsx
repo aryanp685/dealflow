@@ -24,7 +24,7 @@ async function postJson(path: string, body: unknown) {
   return j;
 }
 
-export default function ManagerTeam({ notify }: { notify: (msg: string, tone?: 'ok' | 'err') => void }) {
+export default function ManagerTeam({ notify, planKey }: { notify: (msg: string, tone?: 'ok' | 'err') => void; planKey: string }) {
   const qc = useQueryClient();
   const ctx = useQuery({ queryKey: ['manager'], queryFn: fetchManagerInfo, staleTime: 60_000, retry: false });
   const [code, setCode] = useState<{ code: string; expires_in_min: number } | null>(null);
@@ -106,6 +106,9 @@ export default function ManagerTeam({ notify }: { notify: (msg: string, tone?: '
       <m.div className="card" variants={listItem}>
         <h3 className="card-title">Manage a creator</h3>
         <p className="card-sub">Enter the 6-character pairing code the creator shared with you.</p>
+        {planKey !== 'pro' && (
+          <p className="card-sub">🔒 Linking creators needs Pro — upgrade from the Pricing tab to unlock it.</p>
+        )}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <label className="field" style={{ flex: '1 1 200px', marginBottom: 0 }}>
             <label>Pairing code</label>
@@ -122,7 +125,7 @@ export default function ManagerTeam({ notify }: { notify: (msg: string, tone?: '
           <button
             className="btn primary"
             style={{ alignSelf: 'flex-end' }}
-            disabled={redeem.isPending || redeemInput.trim().length === 0}
+            disabled={redeem.isPending || redeemInput.trim().length === 0 || planKey !== 'pro'}
             onClick={() => redeem.mutate(redeemInput.trim())}
           >
             {redeem.isPending ? 'Linking…' : 'Link account'}

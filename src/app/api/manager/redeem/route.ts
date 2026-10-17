@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
-import { UnauthorizedError, getManagerContext } from '@/lib/auth';
+import { UnauthorizedError, effectivePlan, getManagerContext } from '@/lib/auth';
 import { createManagerLink, findUserById, redeemManagerCode } from '@/lib/db';
 import { canLink, hashPairCode, isValidPairCodeFormat } from '@/lib/manager';
 import { LIMITS, clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
@@ -12,6 +12,12 @@ const schema = z.object({ code: z.string().trim().min(1, 'Enter the pairing code
 export async function POST(request: Request) {
   try {
     const ctx = await getManagerContext();
+    if (effectivePlan(ctx.me) !== 'pro') {
+      return NextResponse.json(
+        { error: 'Team mode is a Pro feature. Upgrade from the Pricing tab to link creators.', code: 'plan_limit' },
+        { status: 402 }
+      );
+    }
     const body = await request.json().catch(() => null);
     if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     const { code } = schema.parse(body);
