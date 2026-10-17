@@ -109,6 +109,7 @@ export interface DbDriver {
   getLicenseByKey(key: string): Promise<LicenseRow | undefined>;
   getLicenseByUserId(userId: number): Promise<LicenseRow | undefined>;
   insertLicense(row: { license_key: string; user_id: number; buyer_email: string; product_link: string }): Promise<void>;
+  countLicenses(): Promise<number>;
 }
 
 export function normalizeValue(v: unknown): unknown {

@@ -12,6 +12,7 @@ import followupsShot from '../assets/shots/followups.png';
 import { faqs } from '@/lib/content';
 import MobileNav from '@/components/mobile-nav';
 import LifetimeSpots from "@/components/lifetime-spots";
+import { PAYHIP_LIFETIME_URL } from '@/lib/schemas';
 
 export const metadata: Metadata = {
   title: 'DealFlow — get every brand deal paid',
@@ -255,12 +256,12 @@ export default function LandingPage() {
 
           <Reveal><div className="lifetime">
             <div>
-              <div className="lifetime-title">Lifetime deal — first 50 customers</div>
+              <div className="lifetime-title">Lifetime launch deal — first 50 only</div>
               <p>
-                <strong>{formatMoney(7499)} / $149 one-time.</strong> Everything in Pro, forever. <LifetimeSpots />
+                <strong>{formatMoney(999)} one-time on Payhip.</strong> Pro, forever. <LifetimeSpots />
               </p>
             </div>
-            <Link href="/signup?plan=pro&billing=lifetime" className="btn primary lg">Claim lifetime access</Link>
+            <a href={PAYHIP_LIFETIME_URL} target="_blank" rel="noreferrer" className="btn primary lg">Claim on Payhip</a>
           </div></Reveal>
         </section>
 

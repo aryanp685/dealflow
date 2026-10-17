@@ -222,6 +222,10 @@ export const driver: DbDriver = {
     await sql()`INSERT INTO licenses (license_key, user_id, buyer_email, product_link)
                 VALUES (${row.license_key}, ${row.user_id}, ${row.buyer_email}, ${row.product_link})`;
   },
+  async countLicenses() {
+    const rows = await sql()`SELECT COUNT(*)::int AS c FROM licenses`;
+    return (rows[0] as unknown as { c: number }).c;
+  },
 };
 
 let _ready: Promise<void> | null = null;

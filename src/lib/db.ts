@@ -60,6 +60,9 @@ export async function bumpSessionVersion(userId: number) {
 export async function countLifetimeSales() {
   return active.countLifetimeSales();
 }
+export async function countLicenses() {
+  return active.countLicenses();
+}
 export async function getPlanInfo(userId: number) {
   return active.getPlanInfo(userId);
 }

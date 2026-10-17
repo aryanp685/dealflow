@@ -117,6 +117,7 @@ export const PLANS = {
 
 export const LIFETIME_CAP = 50;
 export const LIFETIME_PRICE = { INR: 7499, USD: 149 } as const;
+export const PAYHIP_LIFETIME_URL = 'https://payhip.com/b/WsdCq';
 
 export function expectedMinorUnits(plan: string, billing: string, currency: 'INR' | 'USD'): number | null {
   if (currency !== 'INR' && currency !== 'USD') return null;
